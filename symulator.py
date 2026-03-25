@@ -21,6 +21,7 @@ class App:
         }
         self.nonzero = set()
         self.positive = set()
+        self.incorrect_param = set()
 
         self.root = root
         root.title("Symulator odpowiedzi układu z regulatorem PID")
@@ -500,26 +501,45 @@ class App:
         self.tick()
         #self.canvas.draw()
 
+    def update_sim_button_state(self):
+        if len(self.incorrect_param) > 0:
+            self.sim_button.config(state="disabled")
+        else:
+            self.sim_button.config(state="normal")
 
     def validate_param(self, name, widget):
         text = widget.get()
 
+        # puste pole
         if text.strip() == "":
             widget.config(bg="#ff1919")
+            self.incorrect_param.add(name)
+            self.update_sim_button_state()
             return
 
         try:
             value = float(text)
         except ValueError:
             widget.config(bg="#ff1919")
+            self.incorrect_param.add(name)
+            self.update_sim_button_state()
             return
 
+        # reguły walidacji
         if name in self.nonzero and value == 0:
             widget.config(bg="#ff1919")
+            self.incorrect_param.add(name)
+
         elif name in self.positive and value < 0:
-                widget.config(bg="#ff1919")
+            widget.config(bg="#ff1919")
+            self.incorrect_param.add(name)
+
         else:
             widget.config(bg="#009919")
+            if name in self.incorrect_param:
+                self.incorrect_param.remove(name)
+
+        self.update_sim_button_state()
 
 # --- START PROGRAMU ---
 root = tk.Tk()
