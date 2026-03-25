@@ -1,3 +1,6 @@
+![Build and test](https://github.com/Chrzanielomilos/PID-simulator/actions/workflows/build.yml/badge.svg)
+
+
 # TODO:
 Wstawić obrazki wzorów z Latext do MD i do okienka aplikacji
 # **Symulator odpowiedzi układu z regulatorem PID**
