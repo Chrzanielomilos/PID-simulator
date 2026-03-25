@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import ttk
 import random
+import platform
 import matplotlib
 matplotlib.use("TkAgg")
 import matFunctions as mf
@@ -520,9 +521,19 @@ class App:
         else:
             widget.config(bg="#009919")
 
-
 # --- START PROGRAMU ---
 root = tk.Tk()
-root.attributes("-zoomed", True) # Linux
+
+# Wieloplatformowa maksymalizacja okna
+system_operacyjny = platform.system()
+if system_operacyjny == "Linux":
+    root.attributes("-zoomed", True)
+elif system_operacyjny == "Windows":
+    root.state("zoomed")
+elif system_operacyjny == "Darwin":  # macOS
+    szerokosc = root.winfo_screenwidth()
+    wysokosc = root.winfo_screenheight()
+    root.geometry(f"{szerokosc}x{wysokosc}+0+0")
+
 app = App(root)
 root.mainloop()
