@@ -1,0 +1,57 @@
+name: Build and Test PID Simulator
+
+on:
+  push:
+    branches: [ "main", "master", "test-ci" ]
+  pull_request:
+    branches: [ "main", "master", "test-ci" ]
+
+jobs:
+  build:
+    name: Build on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: ["3.11"]
+
+    steps:
+    - name: Pobranie repozytorium
+      uses: actions/checkout@v4
+
+    - name: Konfiguracja środowiska Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+        cache: 'pip'
+
+    - name: Instalacja zależności systemowych (Tylko Linux)
+      if: runner.os == 'Linux'
+      # Serwery Linuxowe na GitHubie nie mają ekranu (są "headless"), 
+      # tk inter wymaga wirtualnego ekranu (xvfb) do samego zaimportowania
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y python3-tk xvfb
+
+    - name: Instalacja bibliotek Pythona
+      run: |
+        python -m pip install --upgrade pip
+        pip install matplotlib pyinstaller
+
+    - name: Testowanie (Weryfikacja składni i importów)
+      # Testujemy, czy pliki kompilują w Pythonie, bez otwierania okna GUI
+      run: |
+        python -m py_compile symulator.py
+        python -m py_compile matFunctions.py
+
+    - name: Budowanie aplikacji (PyInstaller)
+      # Tworzy jeden plik wykonywalny bez konsoli w tle (--windowed)
+      run: |
+        pyinstaller --noconfirm --onefile --windowed symulator.py
+
+    - name: Zapisanie gotowych plików (Artifacts)
+      uses: actions/upload-artifact@v4
+      with:
+        name: PID-Simulator-${{ runner.os }}
+        path: dist/
+        retention-days: 7
