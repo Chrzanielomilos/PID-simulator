@@ -14,8 +14,7 @@ class FiniteSquare:
         )
     
     def returnStep(self, t_min):
-        tx = self.duration / 20
-        return tx if tx < t_min else t_min
+        return min((self.duration / 20), t_min)
 
     def getValue(self, time):
         if time > self.duration:
@@ -36,8 +35,7 @@ class Ramp:
         )
     
     def returnStep(self, t_min):
-        tx = self.raise_time / 20
-        return tx if tx < t_min else t_min
+        return min((self.raise_time / 20), t_min)
 
     def getValue(self, time):
         if time > self.raise_time:
@@ -61,8 +59,7 @@ class SineWave:
         )
     
     def returnStep(self, t_min):
-        tx = 1 / (self.frequency * 20)
-        return tx if tx < t_min else t_min
+        return min((1 / (self.frequency * 20)), t_min)
 
     def getValue(self, time):
         return self.amplitude * math.sin(np.deg2rad(self.delay) + 2 * np.pi * self.frequency * time)
@@ -85,7 +82,7 @@ class TriangleWave:
         tx1 = self.raise_time / 20
         tx2 = self.fall_time / 20
         tx = tx2 if tx2 < tx1 and self.fall_time != 0 else tx1
-        return tx if tx < t_min else t_min
+        return min(tx, t_min)
 
     def getValue(self, time):
         # Z twierdzenia talesa o podobieństwie trójkątów

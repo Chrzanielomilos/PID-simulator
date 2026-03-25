@@ -64,7 +64,7 @@ W katalogu projektu:
 ### Linux
 ```bash
 source ./venv/bin/activate
-python main.py
+python symulator.py
 ```
 
 Aplikacja otworzy okno GUI z panelem sterowania i wykresem.

@@ -230,7 +230,8 @@ class App:
             "Td": tk.DoubleVar(value=1),
         }
 
-        self.nonzero.update({"Kp", "Tf", "Ki", "Kd", "Ti", "Td"}) 
+        self.nonzero.update({"Kp", "Tf", "Ki", "Kd", "Ti", "Td"})
+        self.positive.update({"Tf", "Ti", "Td"})
 
         # Ramka główna
         self.pid_frame = tk.Frame(parent)
@@ -482,10 +483,7 @@ class App:
             Td = self.pid_vars["Td"].get()
             B  = Kp * Td
             A  = Kp / Ti
-            t2 = Ti / 20
-            t_min = t2 if t2 < t_min else t_min
-            t2 = Td / 20
-            t_min = t2 if t2 < t_min else t_min
+            t_min = min((Ti / 20), (Td / 20), t_min)
         else:
             Ki = self.pid_vars["Ki"].get()
             Kd = self.pid_vars["Kd"].get()
@@ -493,10 +491,7 @@ class App:
             Td = Kd / Kp
             B  = Kd
             A  = Ki
-            t2 = Ti / 20
-            t_min = t2 if t2 < t_min else t_min
-            t2 = Td / 20
-            t_min = t2 if t2 < t_min else t_min
+            t_min = min((Ti / 20), (Td / 20), t_min)
 
         params = [a1, a0, b2, b1, b0, Kp, Tf, B, A]
 
