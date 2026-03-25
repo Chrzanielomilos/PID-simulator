@@ -140,7 +140,7 @@ class App:
         }
 
         # Które parametry nie mogą być zerem
-        self.nonzero.update({"a1", "b2"}) 
+        self.nonzero.update({"b2"}) 
 
         frame = tk.Frame(parent)
         frame.pack(pady=10, fill="x")
