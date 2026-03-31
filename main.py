@@ -231,6 +231,8 @@ class App:
 
             "Ti": tk.DoubleVar(value=1),
             "Td": tk.DoubleVar(value=0.5),
+
+            "Umax": tk.DoubleVar(value=3),
         }
 
         self.nonzero.update({"Kp", "Tf", "Ki", "Kd", "Ti", "Td"})
@@ -258,9 +260,23 @@ class App:
 
         self.build_pid_row2()
 
+        # --- Rząd 3: Saturacja ---
+        row3 = tk.Frame(self.pid_frame)
+        row3.pack(fill="x", pady=3)
+
+        tk.Label(row3, text="Umax:", width=6).pack(side="left")
+        self.entry_Umax = tk.Entry(row3, textvariable=self.pid_vars["Umax"], width=8)
+        self.entry_Umax.pack(side="left", padx=5)
+
+        # wymagania walidacyjne
+        self.nonzero.add("Umax")
+        self.positive.add("Umax")
+
+
         # Walidacja dla statycznych pól
         self.entry_Kp.bind("<KeyRelease>", lambda e: self.validate_param("Kp", self.entry_Kp))
         self.entry_Tf.bind("<KeyRelease>", lambda e: self.validate_param("Tf", self.entry_Tf))
+        self.entry_Umax.bind("<KeyRelease>", lambda e: self.validate_param("Umax", self.entry_Umax))
 
     def build_ramp_inputs(self):
         tk.Label(self.shape_frame, text="Parametry rampy:", font=("Arial", 12)).pack(anchor="w")
@@ -494,7 +510,9 @@ class App:
             A = Ki
             t_min = min((Ti / 20), (Td / 20), t_min)
 
-        params = [a1, a0, b2, b1, b0, Kp, Tf, B, A]
+        Umax = self.pid_vars["Umax"].get()
+
+        params = [a1, a0, b2, b1, b0, Kp, Tf, B, A, Umax]
 
         self.Sim = Simulator(self.current_shape, t_min, self.ax, self.form, params)
         self.tick()

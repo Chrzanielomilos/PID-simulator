@@ -107,7 +107,8 @@ class Simulator:
             self.a1, self.a0,
             self.b2, self.b1, self.b0,
             self.Kp, self.Tf,
-            self.B, self.A
+            self.B, self.A,
+            self.Umax
         ) = params
 
         # --- Konwersja parametrów PID ---
@@ -115,9 +116,6 @@ class Simulator:
         # Forma czasowa:   A = Kp/Ti, B = Kp*Td
         self.Ki = self.A
         self.Kd = self.B
-
-        # --- Saturacja (na razie stała, później dodasz w GUI) ---
-        self.Umax = 1.0
 
         # --- Dynamiczna transmitancja obiektu ---
         # G(s) = (a1*s + a0) / (b2*s^2 + b1*s + b0)
