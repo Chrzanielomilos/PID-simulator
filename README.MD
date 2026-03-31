@@ -2,7 +2,7 @@
 Wstawić obrazki wzorów z Latext do MD i do okienka aplikacji
 # **Symulator odpowiedzi układu z regulatorem PID**
 
-Interaktywny symulator napisany w Pythonie z wykorzystaniem **Tkinter** i **Matplotlib**, umożliwiający analizę odpowiedzi układów dynamicznych drugiego rzędu sterowanych regulatorem PID.  
+Interaktywny symulator napisany w Pythonie z wykorzystaniem **Tkinter** i **Matplotlib**, umożliwiający analizę odpowiedzi układów dynamicznych drugiego rzędu sterowanych regulatorem PID z filtrem na członie D.  
 Aplikacja pozwala na dobór parametrów transmitancji, konfigurację regulatora oraz wybór sygnału wejściowego.
 
 ---

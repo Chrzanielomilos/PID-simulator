@@ -4,8 +4,8 @@ import random
 import platform
 import matplotlib
 matplotlib.use("TkAgg")
-import matFunctions as mf
-from matFunctions import Simulator
+import simulator as sim
+from simulator import Simulator
 
 class App:
     def __init__(self, root):
@@ -13,7 +13,6 @@ class App:
         # Definicja zmiennych globalnych
         self.form = 0
         self.shape_options = {
-            "impuls jednostkowy": "impulse",
             "rampa": "ramp",
             "skończony prostokąt": "finiteSquare",
             "sinusoidalny": "sineWave",
@@ -61,6 +60,8 @@ class App:
 
         self.shape_frame = tk.Frame(self.left_frame)
         self.shape_frame.pack(fill="x", pady=10)
+
+        self.build_ramp_inputs()
 
         self.sim_button = tk.Button(self.left_frame, text="Symulacja", command=self.run_simulation)
         self.sim_button.pack(fill="x", pady=20)
@@ -133,9 +134,9 @@ class App:
         # Słownik przechowujący zmienne
         self.params = {
             "a1": tk.DoubleVar(value=1),
-            "a0": tk.DoubleVar(value=0),
-            "b2": tk.DoubleVar(value=1),
-            "b1": tk.DoubleVar(value=1),
+            "a0": tk.DoubleVar(value=2),
+            "b2": tk.DoubleVar(value=2),
+            "b1": tk.DoubleVar(value=1.5),
             "b0": tk.DoubleVar(value=1),
         }
 
@@ -222,14 +223,14 @@ class App:
 
         # PID zmienne
         self.pid_vars = {
-            "Kp": tk.DoubleVar(value=1),
-            "Tf": tk.DoubleVar(value=1),
+            "Kp": tk.DoubleVar(value=2),
+            "Tf": tk.DoubleVar(value=0.2),
 
             "Ki": tk.DoubleVar(value=1),
-            "Kd": tk.DoubleVar(value=1),
+            "Kd": tk.DoubleVar(value=0.5),
 
             "Ti": tk.DoubleVar(value=1),
-            "Td": tk.DoubleVar(value=1),
+            "Td": tk.DoubleVar(value=0.5),
         }
 
         self.nonzero.update({"Kp", "Tf", "Ki", "Kd", "Ti", "Td"})
@@ -444,30 +445,28 @@ class App:
         selected = self.shape_options[self.combo.get()]
 
         match selected:
-            case "impulse":
-                self.current_shape = mf.DirracDelta()
 
             case "ramp":
                 rt = self.ramp_vars["rise_time"].get()
                 amp = self.ramp_vars["amplitude"].get()
-                self.current_shape = mf.Ramp(rt, amp)
+                self.current_shape = sim.Ramp(rt, amp)
 
             case "finiteSquare":
                 d = self.finite_square_vars["duration"].get()
                 amp = self.finite_square_vars["amplitude"].get()
-                self.current_shape = mf.FiniteSquare(d, amp)
+                self.current_shape = sim.FiniteSquare(d, amp)
 
             case "sineWave":
                 fr = self.sine_wave_vars["frequency"].get()
                 amp = self.sine_wave_vars["amplitude"].get()
                 dl = self.sine_wave_vars["delay"].get()
-                self.current_shape = mf.SineWave(fr, amp, dl)
+                self.current_shape = sim.SineWave(fr, amp, dl)
 
             case "triangleWave":
                 rt = self.triangle_wave_vars["raise_time"].get()
                 ft = self.triangle_wave_vars["fall_time"].get()
                 amp = self.triangle_wave_vars["amplitude"].get()
-                self.current_shape = mf.TriangleWave(rt, ft, amp)
+                self.current_shape = sim.TriangleWave(rt, ft, amp)
             
         a1 = self.params["a1"].get()
         a0 = self.params["a0"].get()
@@ -491,8 +490,8 @@ class App:
             Kd = self.pid_vars["Kd"].get()
             Ti = Kp / Ki
             Td = Kd / Kp
-            B  = Kd
-            A  = Ki
+            B = Kd
+            A = Ki
             t_min = min((Ti / 20), (Td / 20), t_min)
 
         params = [a1, a0, b2, b1, b0, Kp, Tf, B, A]
