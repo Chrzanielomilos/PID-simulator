@@ -108,7 +108,7 @@ class Simulator:
             self.b2, self.b1, self.b0,
             self.Kp, self.Tf,
             self.B, self.A,
-            self.Umax
+            self.Umax, self.tolerance
         ) = params
 
         # --- Konwersja parametrów PID ---
@@ -139,6 +139,9 @@ class Simulator:
         self.error_counter = 0
         self.steady_counter = 0
 
+        self.settling_time = None
+        self.metrics_ready = False
+
     def run(self):
         if getattr(self, "finished", False):
             return False
@@ -150,6 +153,11 @@ class Simulator:
         ep = 0.001
         if hasattr(self.signal_object, "amplitude"):
             ep = min(ep * self.signal_object.amplitude, ep)
+
+        # Dynamiczne pasmo tolerancji na podstawie amplitudy zadanego sygnału
+        amp = getattr(self.signal_object, "amplitude", 1.0)
+        # dynamiczny uchyb dopuszczalny (np. 0.05 * 10V = 0.5V)
+        ep = self.tolerance * amp 
 
         # --- 10 kroków RK4 ---
         for _ in range(10):
@@ -165,8 +173,6 @@ class Simulator:
             e = r - y
 
             # --- PID ---
-            self.I += e * dt
-
             # filtr D (ISA)
             D_raw = (e - self.e_prev) / dt
             alpha = self.Tf / (self.Tf + dt)
@@ -174,9 +180,17 @@ class Simulator:
             self.Df_prev = Df
             self.e_prev = e
 
-            # sterowanie
-            u = self.Kp * e + self.Ki * self.I + Df
-            u = mf.clip(u, -self.Umax, self.Umax)
+            # Surowe sterowanie (potrzebne do sprawdzenia nasycenia)
+            u_raw = self.Kp * e + self.Ki * self.I + Df
+            
+            # Saturacja (ograniczenie fizyczne)
+            u = mf.clip(u_raw, -self.Umax, self.Umax)
+
+            # Anti-windup (Clamping)
+            # Całkujemy TYLKO jeśli sygnał sterujący nie jest ucięty (u_raw == u)
+            # ALBO jeśli uchyb e działa w kierunku "odklejenia" od nasycenia (u_raw * e <= 0)
+            if u_raw == u or (u_raw * e <= 0):
+                self.I += e * dt
 
             # --- Obiekt (RK4) ---
             self.Xp = mf.rk4_step(self.Ap, self.Bp, self.Xp, u, dt)
@@ -188,20 +202,41 @@ class Simulator:
 
             self.t += dt
 
-            # --- Kryteria stopu ---
-            if abs(e) < ep:
-                self.error_counter += 1
-            else:
-                self.error_counter = 0
-
-            if abs(y) < ep:
+            # --- Kryteria stopu i zbieranie metryk ---
+            # Jeśli uchyb jest mniejszy bądź równy naszej dopuszczalnej tolerancji:
+            if abs(e) <= ep:
                 self.steady_counter += 1
+                # Jeśli to pierwszy moment wpadnięcia w pasmo, zapisz potencjalny czas ustalania
+                if self.settling_time is None:
+                    self.settling_time = self.t 
             else:
+                # Sygnał wypadł poza pasmo dopuszczalne - resetujemy liczniki
                 self.steady_counter = 0
+                self.settling_time = None 
 
-            if self.error_counter > 200 or self.steady_counter > 200:
+            # Jeśli sygnał utrzymał się w paśmie tolerancji przez 200 kroków, kończymy
+            if self.steady_counter > 200:
                 self.finished = True
+                
+                # Obliczenia metryk na koniec symulacji
+                max_y = max(self.y_data)
+                
+                # Wyliczamy % przeregulowania (zabezpieczenie przed dzieleniem przez zero)
+                if amp != 0:
+                    overshoot = ((max_y - amp) / amp) * 100 if max_y > amp else 0.0
+                else:
+                    overshoot = 0.0
+                
+                # Zapisujemy ostateczny słownik z danymi dla GUI
+                self.metrics = {
+                    "step": dt,
+                    "final_e": e,
+                    "overshoot": overshoot,
+                    "settling_time": self.settling_time
+                }
+                self.metrics_ready = True
                 break
+
 
         # --- Rysowanie ---
         self.ax.clear()
