@@ -2,7 +2,7 @@ name: Build and Test PID Simulator
 
 on:
   push:
-    branches: [ "main", "master", "test-ci" ]
+    branches: [ "main", "master", "test-ci", "feature/pid-improvements" ]
   pull_request:
     branches: [ "main", "master", "test-ci" ]
 
@@ -28,26 +28,28 @@ jobs:
     - name: Instalacja zależności systemowych (Tylko Linux)
       if: runner.os == 'Linux'
       # Serwery Linuxowe na GitHubie nie mają ekranu (są "headless"), 
-      # tk inter wymaga wirtualnego ekranu (xvfb) do samego zaimportowania
+      # tkinter wymaga wirtualnego ekranu (xvfb) do samego zaimportowania
       run: |
         sudo apt-get update
         sudo apt-get install -y python3-tk xvfb
 
     - name: Instalacja bibliotek Pythona
+      # Dodano numpy, ponieważ simulator.py go wymaga
       run: |
         python -m pip install --upgrade pip
-        pip install matplotlib pyinstaller
+        pip install matplotlib numpy pyinstaller
 
     - name: Testowanie (Weryfikacja składni i importów)
-      # Testujemy, czy pliki kompilują w Pythonie, bez otwierania okna GUI
+      # Testujemy aktualne pliki bez otwierania okna GUI
       run: |
-        python -m py_compile symulator.py
-        python -m py_compile matFunctions.py
+        python -m py_compile main.py
+        python -m py_compile simulator.py
+        python -m py_compile mathFunctions.py
 
     - name: Budowanie aplikacji (PyInstaller)
-      # Tworzy jeden plik wykonywalny bez konsoli w tle (--windowed)
+      # Wskazujemy main.py jako wejście i nadajemy sensowną nazwę wynikową
       run: |
-        pyinstaller --noconfirm --onefile --windowed symulator.py
+        pyinstaller --noconfirm --onefile --windowed --name "PID-Simulator" main.py
 
     - name: Zapisanie gotowych plików (Artifacts)
       uses: actions/upload-artifact@v4
