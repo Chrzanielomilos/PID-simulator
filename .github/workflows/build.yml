@@ -2,9 +2,9 @@ name: Build and Test PID Simulator
 
 on:
   push:
-    branches: [ "main", "master", "test-ci", "feature/pid-improvements" ]
+    branches: [ "main", "master", "test-ci", "tmp-anti-windup" ]
   pull_request:
-    branches: [ "main", "master", "test-ci" ]
+    branches: [ "main", "master", "test-ci", "tmp-anti-windup" ]
 
 jobs:
   build:
