@@ -295,7 +295,7 @@ class App:
         row1 = tk.Frame(self.shape_frame)
         row1.pack(fill="x", pady=3)
 
-        tk.Label(row1, text="Czas narastania [ms]:", width=20).pack(side="left")
+        tk.Label(row1, text="Czas narastania [s]:", width=20).pack(side="left")
         entry_rt = tk.Entry(row1, textvariable=self.ramp_vars["rise_time"], width=10)
         entry_rt.pack(side="left")
         entry_rt.bind("<KeyRelease>", lambda e: self.validate_param("rise_time", entry_rt))
@@ -326,7 +326,7 @@ class App:
         row1 = tk.Frame(self.shape_frame)
         row1.pack(fill="x", pady=3)
 
-        tk.Label(row1, text="Czas trwania [ms]:", width=20).pack(side="left")
+        tk.Label(row1, text="Czas trwania [s]:", width=20).pack(side="left")
         entry_dt = tk.Entry(row1, textvariable=self.finite_square_vars["duration"], width=10)
         entry_dt.pack(side="left")
         entry_dt.bind("<KeyRelease>", lambda e: self.validate_param("duration", entry_dt))
@@ -408,7 +408,7 @@ class App:
         row1 = tk.Frame(self.shape_frame)
         row1.pack(fill="x", pady=3)
 
-        tk.Label(row1, text="Czas narastania [ms]:", width=20).pack(side="left")
+        tk.Label(row1, text="Czas narastania [s]:", width=20).pack(side="left")
         entry_rt = tk.Entry(row1, textvariable=self.triangle_wave_vars["raise_time"], width=10)
         entry_rt.pack(side="left")
         entry_rt.bind("<KeyRelease>", lambda e: self.validate_param("raise_time", entry_rt))
@@ -417,7 +417,7 @@ class App:
         row2 = tk.Frame(self.shape_frame)
         row2.pack(fill="x", pady=3)
 
-        tk.Label(row2, text="Czas opadania [ms]:", width=20).pack(side="left")
+        tk.Label(row2, text="Czas opadania [s]:", width=20).pack(side="left")
         entry_ft = tk.Entry(row2, textvariable=self.triangle_wave_vars["fall_time"], width=10)
         entry_ft.pack(side="left")
         entry_ft.bind("<KeyRelease>", lambda e: self.validate_param("fall_time", entry_ft))

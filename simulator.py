@@ -5,7 +5,7 @@ import mathFunctions as mf
 class FiniteSquare:
     def __init__(self, duration, amplitude):
         self.amplitude = amplitude
-        self.duration = duration / 1000
+        self.duration = duration
 
     def __str__(self):
         return (
@@ -25,7 +25,7 @@ class FiniteSquare:
 
 class Ramp:
     def __init__(self, raise_time, amplitude):
-        self.raise_time = raise_time / 1000
+        self.raise_time = raise_time
         self.amplitude = amplitude
 
     def __str__(self):
@@ -67,8 +67,8 @@ class SineWave:
     
 class TriangleWave:
     def __init__(self, raise_time, fall_time, amplitude):
-        self.raise_time = raise_time / 1000
-        self.fall_time = fall_time / 1000
+        self.raise_time = raise_time
+        self.fall_time = fall_time
         self.amplitude = amplitude
 
     def __str__(self):
