@@ -63,6 +63,16 @@ class App:
 
         self.build_ramp_inputs()
 
+        # --- Dodane: Tolerancja stanu ustalonego ---
+        row_tol = tk.Frame(self.left_frame)
+        row_tol.pack(fill="x", pady=5)
+        tk.Label(row_tol, text="Tolerancja ustabilizowania [%]:").pack(side="left")
+        
+        self.var_tolerance = tk.DoubleVar(value=5.0)
+        self.entry_tol = tk.Entry(row_tol, textvariable=self.var_tolerance, width=8)
+        self.entry_tol.pack(side="right")
+        # --- Koniec dodanego fragmentu ---
+
         self.sim_button = tk.Button(self.left_frame, text="Symulacja", command=self.run_simulation)
         self.sim_button.pack(fill="x", pady=20)
 
@@ -455,6 +465,17 @@ class App:
     def tick(self):
         if self.Sim.run():
             self.root.after(20, self.tick)   # kontynuuj
+        else:
+            # Gdy symulacja się zakończy (Sim.run() zwróci False)
+            if hasattr(self.Sim, "metrics_ready") and self.Sim.metrics_ready:
+                m = self.Sim.metrics
+                self.log("--- WYNIKI SYMULACJI ---")
+                self.log(f"Krok integracji: {m['step']:.5f} s")
+                self.log(f"Końcowy uchyb: {m['final_e']:.5f}")
+                self.log(f"Przeregulowanie: {m['overshoot']:.2f}%")
+                self.log(f"Czas ustalania: {m['settling_time']:.3f} s")
+            else:
+                self.log("--- SYMULACJA PRZERWANA ---")
 
     def run_simulation(self):
 
@@ -511,8 +532,13 @@ class App:
             t_min = min((Ti / 20), (Td / 20), t_min)
 
         Umax = self.pid_vars["Umax"].get()
+        tolerance = self.var_tolerance.get() / 100.0
 
-        params = [a1, a0, b2, b1, b0, Kp, Tf, B, A, Umax]
+        params = [a1, a0, b2, b1, b0, Kp, Tf, B, A, Umax, tolerance]
+
+        self.log_box.config(state="normal")
+        self.log_box.delete("1.0", tk.END)
+        self.log_box.config(state="disabled")
 
         self.Sim = Simulator(self.current_shape, t_min, self.ax, self.form, params)
         self.tick()

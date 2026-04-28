@@ -116,9 +116,13 @@ def ssdata(G: TransferFunction):
     # num = [b0, b1, ..., bn]
     b = num
 
+    #D = b[0]
+    ## C = [b1 - a1*D, b2 - a2*D, ..., bn - an*D]
+    #C = [[b[i + 1] - a[i] * D for i in range(n)]]
+
     D = b[0]
-    # C = [b1 - a1*D, b2 - a2*D, ..., bn - an*D]
-    C = [[b[i + 1] - a[i] * D for i in range(n)]]
+    # Poprawiona kolejność: [bn - an*D, b(n-1) - a(n-1)*D, ..., b1 - a1*D]
+    C = [[b[n - i] - a[n - 1 - i] * D for i in range(n)]]
 
     # A – macierz n×n w formie sterowalnej
     A = [[0.0 for _ in range(n)] for _ in range(n)]
