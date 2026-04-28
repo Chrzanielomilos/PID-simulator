@@ -17,6 +17,9 @@ class FiniteSquare:
     def returnStep(self, t_min):
         return min((self.duration / 20), t_min)
 
+    def getSettlingTime(self):
+        return self.duration
+
     def getValue(self, time):
         if time > self.duration:
             return 0
@@ -37,6 +40,9 @@ class Ramp:
     
     def returnStep(self, t_min):
         return min((self.raise_time / 20), t_min)
+    
+    def getSettlingTime(self):
+        return self.raise_time
 
     def getValue(self, time):
         if time > self.raise_time:
@@ -62,7 +68,11 @@ class SineWave:
     def returnStep(self, t_min):
         return min((1 / (self.frequency * 20)), t_min)
 
+    def getSettlingTime(self):
+        return -1
+
     def getValue(self, time):
+        np.deg2rad(self.delay)
         return self.amplitude * math.sin(np.deg2rad(self.delay) + 2 * np.pi * self.frequency * time)
     
 class TriangleWave:
@@ -94,6 +104,9 @@ class TriangleWave:
             return 0
 
         return (self.amplitude * (self.raise_time + self.fall_time - time)) / self.fall_time
+    
+    def getSettlingTime(self):
+        return self.raise_time + self.fall_time
 
 class Simulator:
     def __init__(self, signal_object, t_min, ax, form, params):
@@ -204,7 +217,7 @@ class Simulator:
 
             # --- Kryteria stopu i zbieranie metryk ---
             # Jeśli uchyb jest mniejszy bądź równy naszej dopuszczalnej tolerancji:
-            if abs(e) <= ep:
+            if abs(e) <= ep and self.signal_object.getSettlingTime() < self.t:
                 self.steady_counter += 1
                 # Jeśli to pierwszy moment wpadnięcia w pasmo, zapisz potencjalny czas ustalania
                 if self.settling_time is None:
@@ -214,8 +227,8 @@ class Simulator:
                 self.steady_counter = 0
                 self.settling_time = None 
 
-            # Jeśli sygnał utrzymał się w paśmie tolerancji przez 200 kroków, kończymy
-            if self.steady_counter > 200:
+            # Jeśli sygnał utrzymał się w paśmie tolerancji przez 300 kroków, kończymy
+            if self.steady_counter > 300 or (isinstance(self.signal_object, SineWave) and (6 / self.signal_object.frequency) < self.t):
                 self.finished = True
                 
                 # Obliczenia metryk na koniec symulacji

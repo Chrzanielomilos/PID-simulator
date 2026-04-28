@@ -41,8 +41,14 @@ class App:
         self.create_parameter_inputs(self.left_frame)
 
         # Przyciski
-        tk.Button(self.left_frame, text="Forma klasyczna", command=lambda: self.switchForm(0)).pack(fill="x", pady=5)
-        tk.Button(self.left_frame, text="Forma czasowa", command=lambda: self.switchForm(1)).pack(fill="x", pady=5)
+        button_frame = tk.Frame(self.left_frame)
+        button_frame.pack(pady=5)
+
+        tk.Button(button_frame, text="Forma klasyczna",
+                command=lambda: self.switchForm(0)).grid(row=0, column=0, padx=5)
+
+        tk.Button(button_frame, text="Forma czasowa",
+                command=lambda: self.switchForm(1)).grid(row=0, column=1, padx=5)
 
         # Do podania parametry PID
         self.create_pid_inputs(self.left_frame)
@@ -68,9 +74,18 @@ class App:
         row_tol.pack(fill="x", pady=5)
         tk.Label(row_tol, text="Tolerancja ustabilizowania [%]:").pack(side="left")
         
-        self.var_tolerance = tk.DoubleVar(value=5.0)
+        self.var_tolerance = tk.DoubleVar(value=1.0)
         self.entry_tol = tk.Entry(row_tol, textvariable=self.var_tolerance, width=8)
         self.entry_tol.pack(side="right")
+
+        self.nonzero.update({"tolerance"})
+        self.positive.update({"tolerance"})  
+
+        # Walidacja pola
+        for name, widget in [
+            ("tolerance", self.entry_tol),
+        ]:
+            widget.bind("<KeyRelease>", lambda e, n=name, w=widget: self.validate_param(n, w))
         # --- Koniec dodanego fragmentu ---
 
         self.sim_button = tk.Button(self.left_frame, text="Symulacja", command=self.run_simulation)
@@ -392,12 +407,6 @@ class App:
         entry_dl.pack(side="left")
         entry_dl.bind("<KeyRelease>", lambda e: self.validate_param("delay", entry_dl))
 
-        # zmienne rampy
-        self.sine_wave_vars = {
-            "frequency": tk.DoubleVar(value=1),
-            "amplitude": tk.DoubleVar(value=1),
-            "delay": tk.DoubleVar(value=0)
-        }
 
     def build_triangle_wave_inputs(self):
 
@@ -473,7 +482,7 @@ class App:
                 self.log(f"Krok integracji: {m['step']:.5f} s")
                 self.log(f"Końcowy uchyb: {m['final_e']:.5f}")
                 self.log(f"Przeregulowanie: {m['overshoot']:.2f}%")
-                self.log(f"Czas ustalania: {m['settling_time']:.3f} s")
+                self.log(f"Czas ustalania: {(m['settling_time'] if m['settling_time'] != None else -1):.3f} s")
             else:
                 self.log("--- SYMULACJA PRZERWANA ---")
 
