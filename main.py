@@ -6,6 +6,7 @@ import matplotlib
 matplotlib.use("TkAgg")
 import simulator as sim
 from simulator import Simulator
+from tooltip import Tooltip
 
 class App:
     def __init__(self, root):
@@ -219,10 +220,16 @@ class App:
         if self.form == 0:
             # Forma klasyczna → Ki, Kd
             tk.Label(self.pid_row2, text="Ki:", width=4).pack(side="left")
+            info_Ki = tk.Label(self.pid_row2, text="ⓘ", fg="lightblue", cursor="hand2")
+            info_Ki.pack(side="left")
+            Tooltip(info_Ki, "Wzmocnienie członu całkującego regulatora PID.")
             self.entry_Ki = tk.Entry(self.pid_row2, textvariable=self.pid_vars["Ki"], width=8)
             self.entry_Ki.pack(side="left", padx=5)
 
             tk.Label(self.pid_row2, text="Kd:", width=4).pack(side="left")
+            info_Kd = tk.Label(self.pid_row2, text="ⓘ", fg="lightblue", cursor="hand2")
+            info_Kd.pack(side="left")
+            Tooltip(info_Kd, "Wzmocnienie członu różniczkującego regulatora PID.")
             self.entry_Kd = tk.Entry(self.pid_row2, textvariable=self.pid_vars["Kd"], width=8)
             self.entry_Kd.pack(side="left", padx=5)
 
@@ -233,10 +240,16 @@ class App:
         else:
             # Forma czasowa → Ti, Td
             tk.Label(self.pid_row2, text="Ti [s]:", width=4).pack(side="left")
+            info_Ti = tk.Label(self.pid_row2, text="ⓘ", fg="lightblue", cursor="hand2")
+            info_Ti.pack(side="left")
+            Tooltip(info_Ti, "Stała czasowa członu całkującego regulatora PID.")
             self.entry_Ti = tk.Entry(self.pid_row2, textvariable=self.pid_vars["Ti"], width=8)
             self.entry_Ti.pack(side="left", padx=5)
 
             tk.Label(self.pid_row2, text="Td [s]:", width=4).pack(side="left")
+            info_Td = tk.Label(self.pid_row2, text="ⓘ", fg="lightblue", cursor="hand2")
+            info_Td.pack(side="left")
+            Tooltip(info_Td, "Stała czasowa członu różniczkującego regulatora PID.")
             self.entry_Td = tk.Entry(self.pid_row2, textvariable=self.pid_vars["Td"], width=8)
             self.entry_Td.pack(side="left", padx=5)
 
@@ -258,6 +271,7 @@ class App:
             "Td": tk.DoubleVar(value=0.5),
 
             "Umax": tk.DoubleVar(value=3),
+            "Umin": tk.DoubleVar(value=0)
         }
 
         self.nonzero.update({"Kp", "Tf", "Ki", "Kd", "Ti", "Td"})
@@ -272,10 +286,16 @@ class App:
         row1.pack(fill="x", pady=3)
 
         tk.Label(row1, text="Kp:", width=4).pack(side="left")
+        info_Kp = tk.Label(row1, text="ⓘ", fg="lightblue", cursor="hand2")
+        info_Kp.pack(side="left")
+        Tooltip(info_Kp, "Wzmocnienie członu proporcjonalnego regulatora PID.")
         self.entry_Kp = tk.Entry(row1, textvariable=self.pid_vars["Kp"], width=8)
         self.entry_Kp.pack(side="left", padx=5)
 
         tk.Label(row1, text="Tf [s]:", width=4).pack(side="left")
+        info_Tf = tk.Label(row1, text="ⓘ", fg="lightblue", cursor="hand2")
+        info_Tf.pack(side="left")
+        Tooltip(info_Tf, "Stała czasowa filtru na wyjściu członu różniczkującego regulatora PID.")
         self.entry_Tf = tk.Entry(row1, textvariable=self.pid_vars["Tf"], width=8)
         self.entry_Tf.pack(side="left", padx=5)
 
@@ -289,9 +309,19 @@ class App:
         row3 = tk.Frame(self.pid_frame)
         row3.pack(fill="x", pady=3)
 
-        tk.Label(row3, text="Umax:", width=6).pack(side="left")
+        tk.Label(row3, text="Umax [V]:", width=8).pack(side="left")
+        info_Umax = tk.Label(row3, text="ⓘ", fg="lightblue", cursor="hand2")
+        info_Umax.pack(side="left")
+        Tooltip(info_Umax, "Maksymalna wartość napięcia na wyjściu regulatora PID.")
         self.entry_Umax = tk.Entry(row3, textvariable=self.pid_vars["Umax"], width=8)
         self.entry_Umax.pack(side="left", padx=5)
+
+        tk.Label(row3, text="Umin [V]:", width=8).pack(side="left")
+        info_Umin = tk.Label(row3, text="ⓘ", fg="lightblue", cursor="hand2")
+        info_Umin.pack(side="left")
+        Tooltip(info_Umin, "Minimalna wartość napięcia na wyjściu regulatora PID.")
+        self.entry_Umin = tk.Entry(row3, textvariable=self.pid_vars["Umin"], width=8)
+        self.entry_Umin.pack(side="left", padx=5)
 
         # wymagania walidacyjne
         self.nonzero.add("Umax")
@@ -541,9 +571,10 @@ class App:
             t_min = min((Ti / 20), (Td / 20), t_min)
 
         Umax = self.pid_vars["Umax"].get()
+        Umin = self.pid_vars["Umin"].get()
         tolerance = self.var_tolerance.get() / 100.0
 
-        params = [a1, a0, b2, b1, b0, Kp, Tf, B, A, Umax, tolerance]
+        params = [a1, a0, b2, b1, b0, Kp, Tf, B, A, Umax, Umin, tolerance]
 
         self.log_box.config(state="normal")
         self.log_box.delete("1.0", tk.END)

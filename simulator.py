@@ -121,7 +121,7 @@ class Simulator:
             self.b2, self.b1, self.b0,
             self.Kp, self.Tf,
             self.B, self.A,
-            self.Umax, self.tolerance
+            self.Umax, self.Umin, self.tolerance
         ) = params
 
         # --- Konwersja parametrów PID ---
@@ -197,7 +197,7 @@ class Simulator:
             u_raw = self.Kp * e + self.Ki * self.I + Df
             
             # Saturacja (ograniczenie fizyczne)
-            u = mf.clip(u_raw, -self.Umax, self.Umax)
+            u = mf.clip(u_raw, self.Umin, self.Umax)
 
             # Anti-windup (Clamping)
             # Całkujemy TYLKO jeśli sygnał sterujący nie jest ucięty (u_raw == u)
