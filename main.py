@@ -89,6 +89,9 @@ class App:
             widget.bind("<KeyRelease>", lambda e, n=name, w=widget: self.validate_param(n, w))
         # --- Koniec dodanego fragmentu ---
 
+        self.calc_button = tk.Button(self.left_frame, text="Wyreguluj do zadanych ustawień", command=self.calc_pid_window)
+        self.calc_button.pack(fill="x", pady=20)
+
         self.sim_button = tk.Button(self.left_frame, text="Symulacja", command=self.run_simulation)
         self.sim_button.pack(fill="x", pady=20)
 
@@ -623,6 +626,97 @@ class App:
                 self.incorrect_param.remove(name)
 
         self.update_sim_button_state()
+
+    def calc_pid(self):
+
+        if hasattr(self, "Sim"):
+            self.Sim.auto_tune()
+            # Po auto-tune, zaktualizuj pola PID
+            Kp, Tf, B, A = self.Sim.get_pid_params()
+            self.pid_vars["Kp"].set(Kp)
+            self.pid_vars["Tf"].set(Tf)
+
+            if self.form == 0:
+                # Klasyczna
+                Ki = A
+                Kd = B
+                self.pid_vars["Ki"].set(Ki)
+                self.pid_vars["Kd"].set(Kd)
+            else:
+                # Czasowa
+                Ti = Kp / A
+                Td = B / Kp
+                self.pid_vars["Ti"].set(Ti)
+                self.pid_vars["Td"].set(Td)
+        
+        self.log("PID wyregulowany do zadanych ustawień.")
+
+    def calc_pid_window(self):
+        if not hasattr(self, "Sim"):
+            self.log("Uruchom symulację przynajmniej raz przed auto-regulacją.")
+            return
+
+        win = tk.Toplevel(self.root)
+        win.title("Parametry auto-regulacji PID")
+        win.geometry("300x440")
+
+        win.grab_set()  # okno modalne
+
+        # --- Przeregulowanie ---
+        tk.Label(win, text="Maksymalne przeregulowanie [%]:").pack(anchor="w", pady=5)
+        self.var_overshoot = tk.DoubleVar(value=10.0)
+        tk.Entry(win, textvariable=self.var_overshoot, width=10).pack()
+
+        # --- Czas ustalania ---
+        tk.Label(win, text="Maksymalny czas ustalania [s]:").pack(anchor="w", pady=5)
+        self.var_settling = tk.DoubleVar(value=5.0)
+        tk.Entry(win, textvariable=self.var_settling, width=10).pack()
+
+        # --- Przeregulowanie ---
+        tk.Label(win, text="Maksymaln uchyb ustalony [%]:").pack(anchor="w", pady=5)
+        self.var_ss = tk.DoubleVar(value=10.0)
+        tk.Entry(win, textvariable=self.var_ss, width=10).pack()
+
+        # --- Funkcja celu ---
+        tk.Label(win, text="Funkcja celu:").pack(anchor="w", pady=5)
+        self.var_cost = tk.StringVar(value="IAE")
+        ttk.Combobox(
+            win,
+            textvariable=self.var_cost,
+            values=["IAE", "ISE", "ITAE", "ITSE"],
+            state="readonly"
+        ).pack()
+
+        # --- Wagi ---
+
+        tk.Label(win, text="Waga przeregulowania:").pack(anchor="w", pady=5)
+        self.var_w_overshoot = tk.DoubleVar(value=1.0)
+        tk.Entry(win, textvariable=self.var_w_overshoot, width=10).pack()
+
+        tk.Label(win, text="Waga czasu ustalania:").pack(anchor="w", pady=5)
+        self.var_w_speed = tk.DoubleVar(value=1.0)
+        tk.Entry(win, textvariable=self.var_w_speed, width=10).pack()
+
+        tk.Label(win, text="Waga uchybu ustalonego:").pack(anchor="w", pady=5)
+        self.var_w_ss = tk.DoubleVar(value=1.0)
+        tk.Entry(win, textvariable=self.var_w_ss, width=10).pack()
+
+        # --- Zapis ---
+        tk.Button(win, text="Zapisz", command=lambda: self.save_quality(win)).pack(pady=15)
+
+    def save_quality(self, window):
+        self.quality_params = {
+            "overshoot": self.var_overshoot.get(),
+            "settling_time": self.var_settling.get(),
+            "cost_function": self.var_cost.get(),
+            "weight_ss": self.var_w_ss.get(),
+            "weight_speed": self.var_w_speed.get()
+        }
+
+        self.log(f"Kryteria jakości zapisane: {self.quality_params}")
+        window.destroy()
+
+        self.calc_pid()
 
 # --- START PROGRAMU ---
 root = tk.Tk()

@@ -273,3 +273,11 @@ class Simulator:
             self.ax.set_ylim(ymin - margin, ymax + margin)
 
         return not getattr(self, "finished", False)
+
+class PIDTuner:
+    def __init__(self, root):
+        self.root = root
+        self.quality_params = {
+            "overshoot": 20.0,
+            "settling_time": 5.0
+        }
