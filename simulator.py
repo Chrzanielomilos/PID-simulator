@@ -302,7 +302,7 @@ class Simulator:
             max_Kd = quality_params["max_Kd"]
 
             # Ograniczenia: każde wzmocnienie >= 0 i <= max
-            if Kp < 0 or Ki < 0 or Kd < 0:
+            if Kp =< 0 or Ki < 0 or Kd < 0:
                 return 1e12
 
             if Kp > max_Kp or Ki > max_Ki or Kd > max_Kd:

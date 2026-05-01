@@ -302,8 +302,8 @@ class App:
             "Umin": tk.DoubleVar(value=0)
         }
 
-        self.nonzero.update({"Kp", "Tf", "Ki", "Kd", "Ti", "Td"})
-        self.positive.update({"Tf", "Ti", "Td"})
+        self.nonzero.update({"Kp", "Tf", "Umax"})
+        self.positive.update({"Tf", "Ti", "Td", "Kp", "Ki", "Kd"})
 
         # Ramka główna
         self.pid_frame = tk.Frame(parent)
