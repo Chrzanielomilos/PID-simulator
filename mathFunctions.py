@@ -140,3 +140,85 @@ def ssdata(G: TransferFunction):
     D_mat = [[D]]
 
     return A, B, C, D_mat
+
+import numpy as np
+
+def pid_cost_function(metrics, quality_params):
+    cost_type = quality_params["cost_function"]
+
+    if cost_type == "IAE":
+        return metrics["IAE"]
+
+    elif cost_type == "ISE":
+        return metrics["ISE"]
+
+    elif cost_type == "ITAE":
+        return metrics["ITAE"]
+
+    elif cost_type == "ITSE":
+        return metrics["ITSE"]
+
+    # fallback
+    return metrics["IAE"]
+
+# ---------------------------------------------------------
+#  Nelder–Mead SIMPLEX for PID tuning
+# ---------------------------------------------------------
+
+def nelder_mead(f, x0, step=0.5, alpha=1.0, gamma=2.0, rho=0.5, sigma=0.5, max_iter=60):
+    """
+    Ogólna implementacja metody Nelder–Mead.
+    f(x) – funkcja celu
+    x0 – punkt startowy (np. [Kp, Ki, Kd])
+    step – rozmiar początkowego simpleksu
+    """
+
+    n = len(x0)
+    simplex = [x0]
+
+    # Tworzymy początkowy simplex
+    for i in range(n):
+        x = np.array(x0, dtype=float)
+        x[i] += step
+        simplex.append(x)
+
+    simplex = np.array(simplex)
+
+    for _ in range(max_iter):
+        # Sortowanie wierzchołków wg wartości funkcji celu
+        simplex = sorted(simplex, key=lambda x: f(x))
+        best = simplex[0]
+        worst = simplex[-1]
+        second_worst = simplex[-2]
+
+        # Środek simpleksu bez najgorszego punktu
+        centroid = np.mean(simplex[:-1], axis=0)
+
+        # Odbicie
+        xr = centroid + alpha * (centroid - worst)
+        fr = f(xr)
+
+        if f(best) <= fr < f(second_worst):
+            simplex[-1] = xr
+            continue
+
+        # Ekspansja
+        if fr < f(best):
+            xe = centroid + gamma * (xr - centroid)
+            if f(xe) < fr:
+                simplex[-1] = xe
+            else:
+                simplex[-1] = xr
+            continue
+
+        # Kontrakcja
+        xc = centroid + rho * (worst - centroid)
+        if f(xc) < f(worst):
+            simplex[-1] = xc
+            continue
+
+        # Redukcja
+        best = simplex[0]
+        simplex = [best + sigma * (x - best) for x in simplex]
+
+    return simplex[0]

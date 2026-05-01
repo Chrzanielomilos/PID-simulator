@@ -24,6 +24,7 @@ class App:
         self.incorrect_param = set()
 
         self.root = root
+        self.spinner_label = None
         root.title("Symulator odpowiedzi układu z regulatorem PID")
 
         self.left_frame = tk.Frame(root, width=300, padx=10, pady=10)
@@ -150,6 +151,30 @@ class App:
         if hasattr(self, "Sim"):
             self.Sim.finished = True
             self.log("Symulacja zatrzymana przez użytkownika.")
+
+    def start_spinner(self, text="Trwa auto‑regulacja PID..."):
+        if self.spinner_label is not None:
+            return
+
+        self.spinner_label = tk.Label(self.right_frame, text=text, font=("Arial", 12))
+        self.spinner_label.pack(pady=10)
+
+        self.spinner_frames = ["⠋","⠙","⠹","⠸","⠼","⠴","⠦","⠧","⠇","⠏"]
+        self.spinner_index = 0
+
+        def animate():
+            if self.spinner_label is None:
+                return
+            self.spinner_label.config(text=f"{self.spinner_frames[self.spinner_index]}  Trwa auto‑regulacja PID...")
+            self.spinner_index = (self.spinner_index + 1) % len(self.spinner_frames)
+            self.root.after(100, animate)
+
+        animate()
+
+    def stop_spinner(self):
+        if self.spinner_label:
+            self.spinner_label.destroy()
+            self.spinner_label = None
 
     # --- LOGOWANIE ---
     def log(self, text):
@@ -562,16 +587,19 @@ class App:
             Ti = self.pid_vars["Ti"].get()
             Td = self.pid_vars["Td"].get()
             B  = Kp * Td
-            A  = Kp / Ti
-            t_min = min((Ti / 20), (Td / 20), t_min)
+            A  = Kp / Ti if Ti != 0 else 0
         else:
             Ki = self.pid_vars["Ki"].get()
             Kd = self.pid_vars["Kd"].get()
-            Ti = Kp / Ki
-            Td = Kd / Kp
+            Ti = Kp / Ki if Ki != 0 else 0
+            Td = Kd / Kp if Kp != 0 else 0
             B = Kd
             A = Ki
-            t_min = min((Ti / 20), (Td / 20), t_min)
+            
+        t_min = min(x for x in [Ti/20 if Ti else None,
+                        Td/20 if Td else None,
+                        t_min]
+            if x not in (None, 0))
 
         Umax = self.pid_vars["Umax"].get()
         Umin = self.pid_vars["Umin"].get()
@@ -583,7 +611,7 @@ class App:
         self.log_box.delete("1.0", tk.END)
         self.log_box.config(state="disabled")
 
-        self.Sim = Simulator(self.current_shape, t_min, self.ax, self.form, params)
+        self.Sim = Simulator(self.current_shape, t_min, self.form, params, self.ax)
         self.tick()
         #self.canvas.draw()
 
@@ -627,10 +655,11 @@ class App:
 
         self.update_sim_button_state()
 
-    def calc_pid(self):
+    def calc_pid(self, quality_params):
 
         if hasattr(self, "Sim"):
-            self.Sim.auto_tune()
+            self.Sim.auto_tune(quality_params)
+            self.stop_spinner()
             # Po auto-tune, zaktualizuj pola PID
             Kp, Tf, B, A = self.Sim.get_pid_params()
             self.pid_vars["Kp"].set(Kp)
@@ -658,13 +687,13 @@ class App:
 
         win = tk.Toplevel(self.root)
         win.title("Parametry auto-regulacji PID")
-        win.geometry("300x440")
+        win.geometry("300x600")
 
         win.grab_set()  # okno modalne
 
         # --- Przeregulowanie ---
         tk.Label(win, text="Maksymalne przeregulowanie [%]:").pack(anchor="w", pady=5)
-        self.var_overshoot = tk.DoubleVar(value=10.0)
+        self.var_overshoot = tk.DoubleVar(value=1.0)
         tk.Entry(win, textvariable=self.var_overshoot, width=10).pack()
 
         # --- Czas ustalania ---
@@ -674,8 +703,21 @@ class App:
 
         # --- Przeregulowanie ---
         tk.Label(win, text="Maksymaln uchyb ustalony [%]:").pack(anchor="w", pady=5)
-        self.var_ss = tk.DoubleVar(value=10.0)
+        self.var_ss = tk.DoubleVar(value=0.5)
         tk.Entry(win, textvariable=self.var_ss, width=10).pack()
+
+        # --- Maksymalne wartości PID ---
+        tk.Label(win, text="Maksymalne Kp:").pack(anchor="w", pady=5)
+        self.var_max_Kp = tk.DoubleVar(value=10.0)
+        tk.Entry(win, textvariable=self.var_max_Kp, width=10).pack()
+
+        tk.Label(win, text="Maksymalne Ki:").pack(anchor="w", pady=5)
+        self.var_max_Ki = tk.DoubleVar(value=5.0)
+        tk.Entry(win, textvariable=self.var_max_Ki, width=10).pack()
+
+        tk.Label(win, text="Maksymalne Kd:").pack(anchor="w", pady=5)
+        self.var_max_Kd = tk.DoubleVar(value=5.0)
+        tk.Entry(win, textvariable=self.var_max_Kd, width=10).pack()
 
         # --- Funkcja celu ---
         tk.Label(win, text="Funkcja celu:").pack(anchor="w", pady=5)
@@ -708,15 +750,22 @@ class App:
         self.quality_params = {
             "overshoot": self.var_overshoot.get(),
             "settling_time": self.var_settling.get(),
+            "ss": self.var_ss.get(),
             "cost_function": self.var_cost.get(),
+            "weight_overshoot": self.var_w_overshoot.get(),
             "weight_ss": self.var_w_ss.get(),
-            "weight_speed": self.var_w_speed.get()
+            "weight_speed": self.var_w_speed.get(),
+            "max_Kp": self.var_max_Kp.get(),
+            "max_Ki": self.var_max_Ki.get(),
+            "max_Kd": self.var_max_Kd.get()
         }
 
         self.log(f"Kryteria jakości zapisane: {self.quality_params}")
         window.destroy()
 
-        self.calc_pid()
+        self.start_spinner()
+
+        self.root.after(50, lambda: self.calc_pid(self.quality_params))
 
 # --- START PROGRAMU ---
 root = tk.Tk()

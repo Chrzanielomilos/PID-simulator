@@ -109,7 +109,7 @@ class TriangleWave:
         return self.raise_time + self.fall_time
 
 class Simulator:
-    def __init__(self, signal_object, t_min, ax, form, params):
+    def __init__(self, signal_object, t_min, form, params, ax = None):
         self.signal_object = signal_object
         self.t_min = t_min
         self.ax = ax
@@ -123,6 +123,11 @@ class Simulator:
             self.B, self.A,
             self.Umax, self.Umin, self.tolerance
         ) = params
+
+        self.IAE = 0.0
+        self.ISE = 0.0
+        self.ITAE = 0.0
+        self.ITSE = 0.0
 
         # --- Konwersja parametrów PID ---
         # Forma klasyczna: A = Ki, B = Kd
@@ -184,6 +189,11 @@ class Simulator:
 
             # uchyb
             e = r - y
+
+            self.IAE += abs(e) * dt
+            self.ISE += (e * e) * dt
+            self.ITAE += abs(e) * self.t * dt
+            self.ITSE += (e * e) * self.t * dt
 
             # --- PID ---
             # filtr D (ISA)
@@ -247,37 +257,91 @@ class Simulator:
                     "overshoot": overshoot,
                     "settling_time": self.settling_time
                 }
+                self.metrics["IAE"] = self.IAE
+                self.metrics["ISE"] = self.ISE
+                self.metrics["ITAE"] = self.ITAE
+                self.metrics["ITSE"] = self.ITSE
                 self.metrics_ready = True
                 break
 
+        if (self.ax != None):
+            # --- Rysowanie ---
+            self.ax.clear()
+            self.ax.margins(x=0)
+            self.ax.plot(self.x_data, self.r_data, "--", color="red", label="Wejście")
+            self.ax.plot(self.x_data, self.y_data, color="blue", label="Wyjście")
+            self.ax.set_title("Wykres odpowiedzi układu z regulatorem PID")
+            self.ax.set_xlabel("Czas")
+            self.ax.set_ylabel("Amplituda")
+            self.ax.grid(True, linestyle="--", alpha=0.5)
+            self.ax.legend()
+            self.ax.figure.canvas.draw()
 
-        # --- Rysowanie ---
-        self.ax.clear()
-        self.ax.margins(x=0)
-        self.ax.plot(self.x_data, self.r_data, "--", color="red", label="Wejście")
-        self.ax.plot(self.x_data, self.y_data, color="blue", label="Wyjście")
-        self.ax.set_title("Wykres odpowiedzi układu z regulatorem PID")
-        self.ax.set_xlabel("Czas")
-        self.ax.set_ylabel("Amplituda")
-        self.ax.grid(True, linestyle="--", alpha=0.5)
-        self.ax.legend()
-        self.ax.figure.canvas.draw()
+            if len(self.x_data) > 1:
+                self.ax.set_xlim(self.x_data[0], self.x_data[-1])
 
-        if len(self.x_data) > 1:
-            self.ax.set_xlim(self.x_data[0], self.x_data[-1])
-
-        if len(self.y_data) > 1:
-            ymin = min(self.y_data)
-            ymax = max(self.y_data)
-            margin = 0.05 * (ymax - ymin if ymax != ymin else 1)
-            self.ax.set_ylim(ymin - margin, ymax + margin)
+            if len(self.y_data) > 1:
+                ymin = min(self.y_data)
+                ymax = max(self.y_data)
+                margin = 0.05 * (ymax - ymin if ymax != ymin else 1)
+                self.ax.set_ylim(ymin - margin, ymax + margin)
 
         return not getattr(self, "finished", False)
 
-class PIDTuner:
-    def __init__(self, root):
-        self.root = root
-        self.quality_params = {
-            "overshoot": 20.0,
-            "settling_time": 5.0
-        }
+    def auto_tune(self, quality_params):
+
+        # Punkt startowy
+        x0 = np.array([self.Kp, self.Ki, self.Kd], dtype=float)
+
+        # Funkcja celu przekazywana do simplex
+        def objective(x):
+            Kp, Ki, Kd = x
+
+            max_Kp = quality_params["max_Kp"]
+            max_Ki = quality_params["max_Ki"]
+            max_Kd = quality_params["max_Kd"]
+
+            # Ograniczenia: każde wzmocnienie >= 0 i <= max
+            if Kp < 0 or Ki < 0 or Kd < 0:
+                return 1e12
+
+            if Kp > max_Kp or Ki > max_Ki or Kd > max_Kd:
+                return 1e12
+
+
+            params = (
+                self.a1, self.a0,
+                self.b2, self.b1, self.b0,
+                Kp, self.Tf,
+                Kd, Ki,
+                self.Umax, self.Umin, self.tolerance
+            )
+
+            Sim = Simulator(self.signal_object, self.t_min, self.form, params, ax=None)
+
+            while Sim.run():
+                pass
+
+            if not Sim.metrics_ready:
+                return 1e12
+
+            # 🔥 JEDYNE miejsce, gdzie liczymy J → mathFunctions.pid_cost_function
+            return mf.pid_cost_function(Sim.metrics, quality_params)
+
+        # Uruchamiamy simplex
+        best = mf.nelder_mead(objective, x0, step=0.3, max_iter=40)
+
+        # Zaokrąglenie do dwóch miejsc po przecinku
+        Kp, Ki, Kd = [round(max(0, v), 2) for v in best]
+
+        # Zapis do regulatora
+        self.Kp = Kp
+        self.Ki = Ki
+        self.Kd = Kd
+        self.A = Ki
+        self.B = Kd
+
+        return Kp, Ki, Kd
+
+    def get_pid_params(self):
+        return self.Kp, self.Tf, self.B, self.A
