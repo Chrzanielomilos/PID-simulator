@@ -8,6 +8,9 @@ import simulator as sim
 from simulator import Simulator
 from tooltip import Tooltip
 
+from matplotlib.figure import Figure
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+
 class App:
     def __init__(self, root):
 
@@ -37,7 +40,41 @@ class App:
         tk.Label(self.left_frame, text="Panel sterowania", font=("Arial", 14)).pack(pady=5)
 
         # Pokazana transmitancja
-        tk.Label(self.left_frame, text="G₀(s) = (a₁·s + a₀) / (b₂·s² + b₁·s + b₀)", font=("Arial", 14)).pack()
+        #tk.Label(self.left_frame, text="G₀(s) = (a₁·s + a₀) / (b₂·s² + b₁·s + b₀)", font=("Arial", 14)).pack()
+
+        # --- Pobranie systemowych kolorów motywu Tkinter ---
+        # Tworzymy tymczasową etykietę by odczytać domyślny kolor tekstu dla danego OS
+        dummy_label = tk.Label(self.left_frame)
+        bg_color_tk = self.left_frame.cget("bg")
+        fg_color_tk = dummy_label.cget("fg")
+        dummy_label.destroy()
+
+        # Funkcja konwertująca 16-bitowe kolory Tkinter na standardowy HEX dla Matplotlib
+        def get_hex_color(widget, color_name):
+            r, g, b = widget.winfo_rgb(color_name)
+            return f"#{r//256:02x}{g//256:02x}{b//256:02x}"
+
+        bg_hex = get_hex_color(self.left_frame, bg_color_tk)
+        fg_hex = get_hex_color(self.left_frame, fg_color_tk)
+
+        # --- Renderowanie wzoru w stylu LaTeX ---
+        fig_eq = Figure(figsize=(4, 1.2), dpi=100)
+        
+        # Ustawienie tła na taki sam kolor HEX jak tło okna aplikacji
+        fig_eq.patch.set_facecolor(bg_hex)
+
+        ax_eq = fig_eq.add_subplot(111)
+        ax_eq.axis('off')
+
+        latex_formula = r"$G_0(s) = \frac{a_1 \cdot s + a_0}{b_2 \cdot s^2 + b_1 \cdot s + b_0}$"
+        
+        # Dodanie parametru color=fg_hex aby czcionka reagowała na tryb Dark/Light
+        ax_eq.text(0.5, 0.5, latex_formula, fontsize=16, ha='center', va='center', color=fg_hex)
+
+        # Osadzenie wygenerowanego wzoru w interfejsie Tkinter
+        self.canvas_eq = FigureCanvasTkAgg(fig_eq, master=self.left_frame)
+        self.canvas_eq.get_tk_widget().pack(pady=5)
+
 
         # Do podania parametry transmitancji
         self.create_parameter_inputs(self.left_frame)

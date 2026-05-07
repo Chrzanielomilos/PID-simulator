@@ -1,8 +1,6 @@
 ![Build and test](https://github.com/Chrzanielomilos/PID-simulator/actions/workflows/build.yml/badge.svg)
 
 
-# TODO:
-Wstawić obrazki wzorów z Latext do MD i do okienka aplikacji
 # **Symulator odpowiedzi układu z regulatorem PID**
 
 Interaktywny symulator napisany w Pythonie z wykorzystaniem **Tkinter** i **Matplotlib**, umożliwiający analizę odpowiedzi układów dynamicznych drugiego rzędu sterowanych regulatorem PID z filtrem na członie D.  
@@ -13,9 +11,10 @@ Aplikacja pozwala na dobór parametrów transmitancji, konfigurację regulatora 
 ## **Funkcjonalności**
 
 - Konfiguracja transmitancji obiektu:
-\[
-  G_0(s) = \frac{a_1 s + a_0}{b_2 s^2 + b_1 s + b_0}
-  \]
+
+$$
+G_0(s) = \frac{a_1 s + a_0}{b_2 s^2 + b_1 s + b_0}
+$$
 
 
 - Wybór formy regulatora PID:
@@ -136,22 +135,22 @@ Wyniki są rysowane na wykresie w czasie rzeczywistym.
 
 Regulator opisany jest równaniami stanu:
 
-\[
+$$
 u = K_p e + I + u_D
-\]
+$$
 
-\[
+$$
 \dot{I} = K_i e
-\]
+$$
 
-\[
+$$
 \dot{u_D} = \frac{K_d \dot{e} - u_D}{T_f}
-\]
+$$
 
 gdzie:
-- \( e = r - y \)
-- \( r(t) \) — sygnał wejściowy  
-- \( y(t) \) — wyjście obiektu  
+- $e = r - y$
+- $r(t)$ — sygnał wejściowy  
+- $y(t)$ — wyjście obiektu  
 
 ---
 
