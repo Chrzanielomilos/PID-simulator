@@ -45,13 +45,24 @@ def zeros(n):
 def ones(n):
     return [1.0 for _ in range(n)]
 
-def mat_from_np(M):
-    # konwersja np.array / array-like -> lista list
-    return [[float(M[i, j]) for j in range(M.shape[1])] for i in range(M.shape[0])]
+def v_add(a, b):
+    return [x + y for x, y in zip(a, b)]
 
-def vec_from_np(v):
-    # kolumna np.array -> lista [ [v0], [v1], ... ]
-    return [[float(v[i, 0])] for i in range(v.shape[0])]
+def v_sub(a, b):
+    return [x - y for x, y in zip(a, b)]
+
+def v_scale(a, s):
+    return [x * s for x in a]
+
+def v_mean(vecs):
+    n = len(vecs)
+    if n == 0: return []
+    m = len(vecs[0])
+    res = [0.0] * m
+    for v in vecs:
+        for i in range(m):
+            res[i] += v[i]
+    return [x / n for x in res]
 
 def rk4_step(A, B, x, u, dt):
     # k1 = A*x + B*u
@@ -141,8 +152,6 @@ def ssdata(G: TransferFunction):
 
     return A, B, C, D_mat
 
-import numpy as np
-
 def pid_cost_function(metrics, quality_params):
     cost_type = quality_params["cost_function"]
 
@@ -166,59 +175,43 @@ def pid_cost_function(metrics, quality_params):
 # ---------------------------------------------------------
 
 def nelder_mead(f, x0, step=0.5, alpha=1.0, gamma=2.0, rho=0.5, sigma=0.5, max_iter=60):
-    """
-    Ogólna implementacja metody Nelder–Mead.
-    f(x) – funkcja celu
-    x0 – punkt startowy (np. [Kp, Ki, Kd])
-    step – rozmiar początkowego simpleksu
-    """
-
     n = len(x0)
-    simplex = [x0]
+    simplex = [x0[:]]
 
-    # Tworzymy początkowy simplex
     for i in range(n):
-        x = np.array(x0, dtype=float)
+        x = x0[:]
         x[i] += step
         simplex.append(x)
 
-    simplex = np.array(simplex)
-
     for _ in range(max_iter):
-        # Sortowanie wierzchołków wg wartości funkcji celu
         simplex = sorted(simplex, key=lambda x: f(x))
         best = simplex[0]
         worst = simplex[-1]
         second_worst = simplex[-2]
 
-        # Środek simpleksu bez najgorszego punktu
-        centroid = np.mean(simplex[:-1], axis=0)
+        centroid = v_mean(simplex[:-1])
 
-        # Odbicie
-        xr = centroid + alpha * (centroid - worst)
+        xr = v_add(centroid, v_scale(v_sub(centroid, worst), alpha))
         fr = f(xr)
 
         if f(best) <= fr < f(second_worst):
             simplex[-1] = xr
             continue
 
-        # Ekspansja
         if fr < f(best):
-            xe = centroid + gamma * (xr - centroid)
+            xe = v_add(centroid, v_scale(v_sub(xr, centroid), gamma))
             if f(xe) < fr:
                 simplex[-1] = xe
             else:
                 simplex[-1] = xr
             continue
 
-        # Kontrakcja
-        xc = centroid + rho * (worst - centroid)
+        xc = v_add(centroid, v_scale(v_sub(worst, centroid), rho))
         if f(xc) < f(worst):
             simplex[-1] = xc
             continue
 
-        # Redukcja
         best = simplex[0]
-        simplex = [best + sigma * (x - best) for x in simplex]
+        simplex = [v_add(best, v_scale(v_sub(x, best), sigma)) for x in simplex]
 
     return simplex[0]

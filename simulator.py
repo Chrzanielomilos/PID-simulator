@@ -1,5 +1,4 @@
 import math
-import numpy as np
 import mathFunctions as mf
 
 class FiniteSquare:
@@ -72,8 +71,7 @@ class SineWave:
         return -1
 
     def getValue(self, time):
-        np.deg2rad(self.delay)
-        return self.amplitude * math.sin(np.deg2rad(self.delay) + 2 * np.pi * self.frequency * time)
+        return self.amplitude * math.sin(math.radians(self.delay) + 2 * math.pi * self.frequency * time)
     
 class TriangleWave:
     def __init__(self, raise_time, fall_time, amplitude):
@@ -291,7 +289,7 @@ class Simulator:
     def auto_tune(self, quality_params):
 
         # Punkt startowy
-        x0 = np.array([self.Kp, self.Ki, self.Kd], dtype=float)
+        x0 = [float(self.Kp), float(self.Ki), float(self.Kd)]
 
         # Funkcja celu przekazywana do simplex
         def objective(x):
