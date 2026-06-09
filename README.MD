@@ -10,14 +10,16 @@ Poniższa dokumentacja opisuje tylko i wyłącznie zachowanie i strukturę tego 
 
 ## Cel projektu
 
-Interaktywny symulator układu drugiego rzędu sterowanego regulatorem PID z filtrem D i prostym anty-windup. Pozwala na ręczną konfigurację transmitancji, parametrów PID, ograniczeń saturacji oraz wyboru sygnału wejściowego, a także uruchomienie automatycznego strojenia (Nelder–Mead) wykorzystującego miary z symulacji.
+Interaktywny symulator układu drugiego rzędu sterowanego regulatorem PID z filtrem D i prostym anty-windup. Pozwala na ręczną konfigurację transmitancji, parametrów PID, ograniczeń saturacji oraz wyboru sygnału wejściowego, a także uruchomienie automatycznego strojenia (Nelder-Mead) wykorzystującego miary z symulacji.
+
+![Build and test](screenshot.jpg)
 
 ---
 
 ## Pliki i ich rola
 
 - `main.py` — GUI (Tkinter): pola wejściowe, walidacja, wywołania `Simulator`, okno auto-regulacji, logi i rysowanie wykresu.
-- `simulator.py` — klasy sygnałów (`Ramp`, `FiniteSquare`, `SineWave`, `TriangleWave`) oraz `Simulator` realizujący: integrację (RK4), PID, saturację, anty-windup, zbieranie metryk i auto-strojenie (Nelder–Mead).
+- `simulator.py` — klasy sygnałów (`Ramp`, `FiniteSquare`, `SineWave`, `TriangleWave`) oraz `Simulator` realizujący: integrację (RK4), PID, saturację, anty-windup, zbieranie metryk i auto-strojenie (Nelder-Mead).
 - `mathFunctions.py` — operacje macierzowe, `rk4_step`, funkcje `tf` i `ssdata` (przekształcenie TF->A,B,C,D), funkcja kosztu `pid_cost_function` i implementacja `nelder_mead`.
 - `tooltip.py` — helper do wyświetlania podpowiedzi w GUI.
 
@@ -60,7 +62,7 @@ W kodzie (`simulator.py`) ta transmitancja jest konwertowana do postaci stanu (A
 
 - Interpretacja parametrów przekazywanych do `Simulator` (parametr `params` w `main.py`):
 
-  `[a1, a0, b2, b1, b0, Kp, Tf, B, A, Umax, Umin, tolerance]`
+  `[a1, a0, b2, b1, b0, Kp, Tf, B, A, Umax, Umin, tolerance, start_delay]`
 
   gdzie w kodzie `A` = `Ki` (jeśli forma klasyczna) lub `Kp/Ti` (jeśli forma czasowa), oraz `B` = `Kd` (klasyczna) lub `Kp*Td` (czasowa).
 
@@ -82,7 +84,7 @@ W kodzie (`simulator.py`) ta transmitancja jest konwertowana do postaci stanu (A
 ## Integracja i dobór kroku
 
 - Integracja stanu obiektu wykonywana jest funkcją `mf.rk4_step` (RK4).
-- Krok `dt` jest dobierany automatycznie na podstawie najmniejszej stałej czasowej. Przez to warto przed uruchomieniem autoregulacji wprowadzić równy punkt początkowy regulatora, ponieważ sam proces strojenia odbędzie się wtedy szybciej.
+- Krok `dt` jest wyznaczany dynamicznie przez obiekt sygnału wejściowego za pomocą metody returnStep(t_min). Dla sygnałów skokowych zależy od czasu narastania/trwania, natomiast dla sygnału sinusoidalnego (SineWave) krok jest zagęszczony do wartości 100 próbek na okres. Warto przed uruchomieniem autoregulacji wprowadzić równy punkt początkowy regulatora, ponieważ sam proces strojenia odbędzie się wtedy szybciej.
 
 ---
 
@@ -93,6 +95,15 @@ W kodzie (`simulator.py`) ta transmitancja jest konwertowana do postaci stanu (A
 - `SineWave(frequency, amplitude, delay=0)`
 - `TriangleWave(raise_time, fall_time, amplitude)`
 
+
+---
+
+### Opóźnienie podania sygnału (Start Delay)
+
+Parametr opóźnienia startu sygnału (w GUI jest pod listą sygnałów wejściowych). Wpływa on na generowanie sygnału referencyjnego $r(t)$ w pętli głównej według zależności:
+
+- Jeśli $t < t_{\mathrm{delay}}$, wówczas $r(t) = 0.0$
+- Jeśli $t \ge t_{\mathrm{delay}}$, wówczas $r(t) = \text{signal\_object.getValue}(t - t_{\mathrm{delay}})$
 
 ---
 
@@ -113,12 +124,12 @@ W kodzie (`simulator.py`) ta transmitancja jest konwertowana do postaci stanu (A
 
 ## Auto-strojenie
 
-- Optymalizator: lokalna implementacja Nelder–Mead dostępna w `mathFunctions.nelder_mead`. `Simulator.auto_tune` wywołuje ją z parametrami `step=0.3` i `max_iter=40`.
+- Optymalizator: lokalna implementacja Nelder-Mead dostępna w `mathFunctions.nelder_mead`. `Simulator.auto_tune` wywołuje ją z parametrami `step=0.3` i `max_iter=40`.
 - Punkt startowy używany przez optymalizator to wektor czterech parametrów: `x0 = [Kp, Ki, Kd, Tf]` (z aktualnych wartości regulatora). Parametr `Tf` jest włączony do optymalizacji w obecnej implementacji.
 
 - Funkcja celu (`objective`) — dokładny przebieg:
   1. Przyjmuje testowane wartości `x = [Kp, Ki, Kd, Tf]`.
-  2. Sprawdza ograniczenia twarde: `Kp <= 0` lub `Ki < 0` lub `Kd < 0` lub `Tf < 0` zwracają karę `1e12`. Dodatkowo sprawdza, czy nie przekroczono górnych limitów `max_Kp`, `max_Ki`, `max_Kd` (wartości z GUI) — naruszenie również daje `1e12`.
+  2. Sprawdza ograniczenia twarde: `Kp <= 0` lub `Ki < 0` lub `Kd < 0` lub `Tf < 0.02` zwracają karę `1e12`. Dodatkowo sprawdza, czy nie przekroczono górnych limitów `max_Kp`, `max_Ki`, `max_Kd` (wartości z GUI) — naruszenie również daje `1e12`.
   3. Tworzy tymczasowy `Simulator` z tymi parametrami i uruchamia go w pętli (`while Sim.run(): pass`).
   4. Po zakończeniu pobiera `Sim.metrics` i oblicza wartość funkcji kosztu wywołaniem `mathFunctions.pid_cost_function(Sim.metrics, quality_params)`.
 
@@ -182,10 +193,16 @@ $$
 
 Łączna kara: $P = P_{\mathrm{ov}} + P_{\mathrm{ts}} + P_{\mathrm{ss}}$.
 
-Funkcja kosztu minimalizowana przez Nelder–Mead to:
+Funkcja kosztu minimalizowana przez Nelder-Mead to:
 
 $$
 J = J_{\mathrm{base}} + 10000 \cdot P
 $$
 
 gdzie wagi $w_{\mathrm{ov}}, w_{\mathrm{ts}}, w_{\mathrm{ss}}$ oraz progi (`overshoot_req`, `settling_req`, `ss_req`) pochodzą z `quality_params` z GUI (`weight_overshoot`, `weight_speed`, `weight_ss`, `overshoot`, `settling_time`, `ss`).
+
+### Sygnał sinusoidalny
+
+Dla sygnału harmonicznego, pojęcia przeregulowania, uchybu ustalonego oraz czasu ustalania nie mają zastosowania fizycznego, więc w implementacji funkcji `pid_cost_function` wprowadzono sprawdzanie flagi `is_sine`. W przypadku wykrycia sygnału sinusoidalnego łączna wartość kary jest całkowicie pomijana (P = 0), a funkcja kosztu zwraca wyłącznie czystą wartość wybranej całki uchybu:
+
+Dzięki temu optymalizator Nelder-Mead skupia się wyłącznie na minimalizacji wybranego błędu integralnego (np. IAE), dopasowując zarówno amplituda, jak i przesunięcie fazowe odpowiedzi układu bez nakładania sztucznych kar za brak ustalenia się sygnału.
