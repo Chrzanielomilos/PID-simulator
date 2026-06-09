@@ -66,7 +66,7 @@ class SineWave:
         )
     
     def returnStep(self, t_min):
-        return min((1 / (self.frequency * 20)), t_min)
+        return min((1 / (self.frequency * 100)), t_min)
 
     def getSettlingTime(self):
         return -1
@@ -258,7 +258,8 @@ class Simulator:
                     "final_e": e,
                     "overshoot": overshoot,
                     "settling_time": self.settling_time,
-                    "mean_e": self.IAE / self.t if self.t > 0 else 0.0
+                    "mean_e": self.IAE / self.t if self.t > 0 else 0.0,
+                    "is_sine": isinstance(self.signal_object, SineWave)
                 }
                 self.metrics["IAE"] = self.IAE
                 self.metrics["ISE"] = self.ISE
@@ -304,7 +305,7 @@ class Simulator:
             max_Kd = quality_params["max_Kd"]
 
             # Ograniczenia: każde wzmocnienie >= 0 i <= max
-            if Kp <= 0 or Ki < 0 or Kd < 0 or Tf < 0:
+            if Kp <= 0 or Ki < 0 or Kd < 0 or Tf < 0.02:
                 return 1e12
             if Kp > max_Kp or Ki > max_Ki or Kd > max_Kd:
                 return 1e12
@@ -329,8 +330,11 @@ class Simulator:
         # Uruchamiamy simplex
         best = mf.nelder_mead(objective, x0, step=0.3, max_iter=40)
 
-        # Zaokrąglenie do dwóch miejsc po przecinku
-        Kp, Ki, Kd, Tf = [round(max(0, v), 2) for v in best]
+        # Ręczne zaokrąglenie z zabezpieczeniem przed zerowym Tf i Kp
+        Kp = round(max(0.01, best[0]), 2)
+        Ki = round(max(0.0,  best[1]), 2)
+        Kd = round(max(0.0,  best[2]), 2)
+        Tf = round(max(0.01, best[3]), 2)
 
         # Zapis do regulatora
         self.Kp = Kp
