@@ -133,25 +133,25 @@ W kodzie dostępne są cztery podstawowe metryki błędu (można je wybrać w GU
 - IAE — Integral of Absolute Error:
 
   $$
-  J_{\mathrm{IAE}} = \int_{0}^{T} |e(t)|\,dt
+  J_{\mathrm{IAE}} = \int_{0}^{T} |e(t)|dt
   $$
 
 - ISE — Integral of Squared Error:
 
   $$
-  J_{\mathrm{ISE}} = \int_{0}^{T} e^2(t)\,dt
+  J_{\mathrm{ISE}} = \int_{0}^{T} e^2(t)dt
   $$
 
 - ITAE — Integral of Time-weighted Absolute Error:
 
   $$
-  J_{\mathrm{ITAE}} = \int_{0}^{T} t\,|e(t)|\,dt
+  J_{\mathrm{ITAE}} = \int_{0}^{T} t|e(t)|dt
   $$
 
 - ITSE — Integral of Time-weighted Squared Error:
 
   $$
-  J_{\mathrm{ITSE}} = \int_{0}^{T} t\,e^2(t)\,dt
+  J_{\mathrm{ITSE}} = \int_{0}^{T} te^2(t)dt
   $$
 
 Wszystkie są kumulowane dyskretnie w `Simulator` i dostępne w `Sim.metrics`.
