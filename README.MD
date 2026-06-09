@@ -102,10 +102,8 @@ W kodzie (`simulator.py`) ta transmitancja jest konwertowana do postaci stanu (A
 
 Parametr opóźnienia startu sygnału (w GUI jest pod listą sygnałów wejściowych). Wpływa on na generowanie sygnału referencyjnego $r(t)$ w pętli głównej według zależności:
 
-- Jeśli $t < t_{\mathrm{delay}}$, wówczas $r(t) = 0.0$
-- Jeśli $t \ge t_{\mathrm{delay}}$, wówczas:
-
-$$r(t) = \text{signal\_object.getValue}(t - t_{\mathrm{delay}})$$
+- Jeśli $t < t_{\mathrm{delay}}$, to `r(t) = 0.0`
+- Jeśli $t \ge t_{\mathrm{delay}}$, to: `r(t)=signal_object.getValue(t−t_delay)`
 
 ---
 
