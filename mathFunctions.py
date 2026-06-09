@@ -154,21 +154,27 @@ def ssdata(G: TransferFunction):
 
 def pid_cost_function(metrics, quality_params):
     cost_type = quality_params["cost_function"]
+    base_cost = metrics.get(cost_type, metrics["IAE"])
 
-    if cost_type == "IAE":
-        return metrics["IAE"]
+    penalty = 0.0
+    
+    # Kara za przeregulowanie z wagą
+    if metrics["overshoot"] > quality_params["overshoot"]:
+        penalty += quality_params["weight_overshoot"] * (metrics["overshoot"] - quality_params["overshoot"])
 
-    elif cost_type == "ISE":
-        return metrics["ISE"]
+    # Kara za czas ustalania z wagą
+    if metrics["settling_time"] is not None:
+        if metrics["settling_time"] > quality_params["settling_time"]:
+            penalty += quality_params["weight_speed"] * (metrics["settling_time"] - quality_params["settling_time"])
+    else:
+        # Duża stała kara za całkowity brak ustalenia
+        penalty += quality_params["weight_speed"] * 1000
 
-    elif cost_type == "ITAE":
-        return metrics["ITAE"]
+    # Kara za uchyb ustalony z wagą
+    if abs(metrics["final_e"]) > quality_params["ss"]:
+        penalty += quality_params["weight_ss"] * (abs(metrics["final_e"]) - quality_params["ss"])
 
-    elif cost_type == "ITSE":
-        return metrics["ITSE"]
-
-    # fallback
-    return metrics["IAE"]
+    return base_cost + penalty * 10000
 
 # ---------------------------------------------------------
 #  Nelder–Mead SIMPLEX for PID tuning

@@ -103,6 +103,17 @@ class App:
         self.combo.pack(fill="x", pady=5)
         self.combo.bind("<<ComboboxSelected>>", self.on_shape_selected)
 
+        # Opóźnienie podania sygnału
+        row_delay = tk.Frame(self.left_frame)
+        row_delay.pack(fill="x", pady=5)
+        tk.Label(row_delay, text="Opóźnienie sygnału [s]:").pack(side="left")
+        self.var_start_delay = tk.DoubleVar(value=0.0)
+        self.entry_start_delay = tk.Entry(row_delay, textvariable=self.var_start_delay, width=8)
+        self.entry_start_delay.pack(side="right")
+        self.positive.update({"start_delay"})
+        self.entry_start_delay.bind("<KeyRelease>", lambda e: self.validate_param("start_delay", self.entry_start_delay))
+
+
         self.shape_frame = tk.Frame(self.left_frame)
         self.shape_frame.pack(fill="x", pady=10)
 
@@ -649,9 +660,10 @@ class App:
 
         Umax = self.pid_vars["Umax"].get()
         Umin = self.pid_vars["Umin"].get()
+        
         tolerance = self.var_tolerance.get() / 100.0
-
-        params = [a1, a0, b2, b1, b0, Kp, Tf, B, A, Umax, Umin, tolerance]
+        start_delay = self.var_start_delay.get()
+        params = [a1, a0, b2, b1, b0, Kp, Tf, B, A, Umax, Umin, tolerance, start_delay]
 
         self.log_box.config(state="normal")
         self.log_box.delete("1.0", tk.END)
