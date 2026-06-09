@@ -1,5 +1,4 @@
 import math
-import numpy as np
 import mathFunctions as mf
 
 class FiniteSquare:
@@ -52,10 +51,11 @@ class Ramp:
         return (self.amplitude * time) / self.raise_time
     
 class SineWave:
-    def __init__(self, frequency, amplitude, delay = 0):
+    def __init__(self, frequency, amplitude, delay = 0, periods = 6):
         self.amplitude = amplitude
         self.frequency = frequency
         self.delay = delay
+        self.periods = periods
 
     def __str__(self):
         return (
@@ -72,8 +72,7 @@ class SineWave:
         return -1
 
     def getValue(self, time):
-        np.deg2rad(self.delay)
-        return self.amplitude * math.sin(np.deg2rad(self.delay) + 2 * np.pi * self.frequency * time)
+        return self.amplitude * math.sin(math.radians(self.delay) + 2 * math.pi * self.frequency * time)
     
 class TriangleWave:
     def __init__(self, raise_time, fall_time, amplitude):
@@ -121,7 +120,7 @@ class Simulator:
             self.b2, self.b1, self.b0,
             self.Kp, self.Tf,
             self.B, self.A,
-            self.Umax, self.Umin, self.tolerance
+            self.Umax, self.Umin, self.tolerance, self.start_delay
         ) = params
 
         self.IAE = 0.0
@@ -181,7 +180,10 @@ class Simulator:
         for _ in range(10):
 
             # sygnał zadany
-            r = self.signal_object.getValue(self.t)
+            if self.t < self.start_delay:
+                r = 0.0
+            else:
+                r = self.signal_object.getValue(self.t - self.start_delay)
 
             # wyjście obiektu
             y_mat = mf.matmul(self.Cp, self.Xp)
@@ -227,7 +229,7 @@ class Simulator:
 
             # --- Kryteria stopu i zbieranie metryk ---
             # Jeśli uchyb jest mniejszy bądź równy naszej dopuszczalnej tolerancji:
-            if abs(e) <= ep and self.signal_object.getSettlingTime() < self.t:
+            if abs(e) <= ep and self.signal_object.getSettlingTime() < (self.t - self.start_delay):
                 self.steady_counter += 1
                 # Jeśli to pierwszy moment wpadnięcia w pasmo, zapisz potencjalny czas ustalania
                 if self.settling_time is None:
@@ -238,7 +240,7 @@ class Simulator:
                 self.settling_time = None 
 
             # Jeśli sygnał utrzymał się w paśmie tolerancji przez 300 kroków, kończymy
-            if self.steady_counter > 300 or (isinstance(self.signal_object, SineWave) and (6 / self.signal_object.frequency) < self.t):
+            if self.steady_counter > 300 or (isinstance(self.signal_object, SineWave) and (self.signal_object.periods / self.signal_object.frequency) < self.t):
                 self.finished = True
                 
                 # Obliczenia metryk na koniec symulacji
@@ -255,7 +257,8 @@ class Simulator:
                     "step": dt,
                     "final_e": e,
                     "overshoot": overshoot,
-                    "settling_time": self.settling_time
+                    "settling_time": self.settling_time,
+                    "mean_e": self.IAE / self.t if self.t > 0 else 0.0
                 }
                 self.metrics["IAE"] = self.IAE
                 self.metrics["ISE"] = self.ISE
@@ -291,30 +294,25 @@ class Simulator:
     def auto_tune(self, quality_params):
 
         # Punkt startowy
-        x0 = np.array([self.Kp, self.Ki, self.Kd], dtype=float)
+        x0 = [float(self.Kp), float(self.Ki), float(self.Kd), float(self.Tf)]
 
         # Funkcja celu przekazywana do simplex
         def objective(x):
-            Kp, Ki, Kd = x
-
+            Kp, Ki, Kd, Tf = x
             max_Kp = quality_params["max_Kp"]
             max_Ki = quality_params["max_Ki"]
             max_Kd = quality_params["max_Kd"]
 
             # Ograniczenia: każde wzmocnienie >= 0 i <= max
-            if Kp < 0 or Kp == 0 or Ki < 0 or Kd < 0:
+            if Kp <= 0 or Ki < 0 or Kd < 0 or Tf < 0:
                 return 1e12
-
             if Kp > max_Kp or Ki > max_Ki or Kd > max_Kd:
                 return 1e12
 
-
             params = (
-                self.a1, self.a0,
-                self.b2, self.b1, self.b0,
-                Kp, self.Tf,
-                Kd, Ki,
-                self.Umax, self.Umin, self.tolerance
+                self.a1, self.a0, self.b2, self.b1, self.b0,
+                Kp, Tf, Kd, Ki,
+                self.Umax, self.Umin, self.tolerance, self.start_delay
             )
 
             Sim = Simulator(self.signal_object, self.t_min, self.form, params, ax=None)
@@ -332,16 +330,17 @@ class Simulator:
         best = mf.nelder_mead(objective, x0, step=0.3, max_iter=40)
 
         # Zaokrąglenie do dwóch miejsc po przecinku
-        Kp, Ki, Kd = [round(max(0, v), 2) for v in best]
+        Kp, Ki, Kd, Tf = [round(max(0, v), 2) for v in best]
 
         # Zapis do regulatora
         self.Kp = Kp
         self.Ki = Ki
         self.Kd = Kd
+        self.Tf = Tf
         self.A = Ki
         self.B = Kd
 
-        return Kp, Ki, Kd
+        return Kp, Ki, Kd, Tf
 
     def get_pid_params(self):
         return self.Kp, self.Tf, self.B, self.A

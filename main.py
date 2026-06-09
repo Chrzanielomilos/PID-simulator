@@ -103,6 +103,17 @@ class App:
         self.combo.pack(fill="x", pady=5)
         self.combo.bind("<<ComboboxSelected>>", self.on_shape_selected)
 
+        # Opóźnienie podania sygnału
+        row_delay = tk.Frame(self.left_frame)
+        row_delay.pack(fill="x", pady=5)
+        tk.Label(row_delay, text="Opóźnienie sygnału [s]:").pack(side="left")
+        self.var_start_delay = tk.DoubleVar(value=0.0)
+        self.entry_start_delay = tk.Entry(row_delay, textvariable=self.var_start_delay, width=8)
+        self.entry_start_delay.pack(side="right")
+        self.positive.update({"start_delay"})
+        self.entry_start_delay.bind("<KeyRelease>", lambda e: self.validate_param("start_delay", self.entry_start_delay))
+
+
         self.shape_frame = tk.Frame(self.left_frame)
         self.shape_frame.pack(fill="x", pady=10)
 
@@ -461,19 +472,17 @@ class App:
         entry_amp.bind("<KeyRelease>", lambda e: self.validate_param("amplitude", entry_amp))
 
     def build_sine_wave_inputs(self):
-
         tk.Label(self.shape_frame, text="Parametry sygnału harmonicznego:", font=("Arial", 12)).pack(anchor="w")
-
-        # zmienne rampy
         self.sine_wave_vars = {
             "frequency": tk.DoubleVar(value=1),
             "amplitude": tk.DoubleVar(value=1),
-            "delay": tk.DoubleVar(value=0)
+            "delay": tk.DoubleVar(value=0),
+            "periods": tk.IntVar(value=6)
         }
 
         # wymagania walidacyjne
-        self.positive.update({"frequency", "amplitude"})
-        self.nonzero.update({"frequency", "amplitude"})
+        self.positive.update({"frequency", "amplitude", "periods"})
+        self.nonzero.update({"frequency", "amplitude", "periods"})
 
         # --- czas trwania ---
         row1 = tk.Frame(self.shape_frame)
@@ -494,13 +503,20 @@ class App:
         entry_amp.bind("<KeyRelease>", lambda e: self.validate_param("amplitude", entry_amp))
 
         # --- przesunięcie fazy ---
-        row2 = tk.Frame(self.shape_frame)
-        row2.pack(fill="x", pady=3)
-
-        tk.Label(row2, text="Przesunięcie fazy [st]:", width=20).pack(side="left")
-        entry_dl = tk.Entry(row2, textvariable=self.sine_wave_vars["delay"], width=10)
+        row3 = tk.Frame(self.shape_frame)
+        row3.pack(fill="x", pady=3)
+        tk.Label(row3, text="Przesunięcie fazy [st]:", width=20).pack(side="left")
+        entry_dl = tk.Entry(row3, textvariable=self.sine_wave_vars["delay"], width=10)
         entry_dl.pack(side="left")
         entry_dl.bind("<KeyRelease>", lambda e: self.validate_param("delay", entry_dl))
+
+        # --- liczba okresów ---
+        row4 = tk.Frame(self.shape_frame)
+        row4.pack(fill="x", pady=3)
+        tk.Label(row4, text="Liczba okresów:", width=20).pack(side="left")
+        entry_per = tk.Entry(row4, textvariable=self.sine_wave_vars["periods"], width=10)
+        entry_per.pack(side="left")
+        entry_per.bind("<KeyRelease>", lambda e: self.validate_param("periods", entry_per))
 
 
     def build_triangle_wave_inputs(self):
@@ -575,9 +591,12 @@ class App:
                 m = self.Sim.metrics
                 self.log("--- WYNIKI SYMULACJI ---")
                 self.log(f"Krok integracji: {m['step']:.5f} s")
-                self.log(f"Końcowy uchyb: {m['final_e']:.5f}")
-                self.log(f"Przeregulowanie: {m['overshoot']:.2f}%")
-                self.log(f"Czas ustalania: {(m['settling_time'] if m['settling_time'] != None else -1):.3f} s")
+                if isinstance(self.Sim.signal_object, sim.SineWave):
+                    self.log(f"Średni uchyb: {m['mean_e']:.5f}")
+                else:
+                    self.log(f"Końcowy uchyb: {m['final_e']:.5f}")
+                    self.log(f"Przeregulowanie: {m['overshoot']:.2f}%")
+                    self.log(f"Czas ustalania: {(m['settling_time'] if m['settling_time'] != None else -1):.3f} s")
             else:
                 self.log("--- SYMULACJA PRZERWANA ---")
 
@@ -601,7 +620,8 @@ class App:
                 fr = self.sine_wave_vars["frequency"].get()
                 amp = self.sine_wave_vars["amplitude"].get()
                 dl = self.sine_wave_vars["delay"].get()
-                self.current_shape = sim.SineWave(fr, amp, dl)
+                per = self.sine_wave_vars["periods"].get()
+                self.current_shape = sim.SineWave(fr, amp, dl, per)
 
             case "triangleWave":
                 rt = self.triangle_wave_vars["raise_time"].get()
@@ -640,9 +660,10 @@ class App:
 
         Umax = self.pid_vars["Umax"].get()
         Umin = self.pid_vars["Umin"].get()
+        
         tolerance = self.var_tolerance.get() / 100.0
-
-        params = [a1, a0, b2, b1, b0, Kp, Tf, B, A, Umax, Umin, tolerance]
+        start_delay = self.var_start_delay.get()
+        params = [a1, a0, b2, b1, b0, Kp, Tf, B, A, Umax, Umin, tolerance, start_delay]
 
         self.log_box.config(state="normal")
         self.log_box.delete("1.0", tk.END)
@@ -724,64 +745,104 @@ class App:
 
         win = tk.Toplevel(self.root)
         win.title("Parametry auto-regulacji PID")
-        win.geometry("300x600")
+        win.geometry("320x600")
+        win.grab_set()
 
-        win.grab_set()  # okno modalne
+        # Konfiguracja Scrollbar i Canvas
+        container = tk.Frame(win)
+        container.pack(fill="both", expand=True)
+
+        canvas = tk.Canvas(container)
+        scrollbar = ttk.Scrollbar(container, orient="vertical", command=canvas.yview)
+        scrollable_frame = tk.Frame(canvas)
+
+        scrollable_frame.bind(
+            "<Configure>",
+            lambda e: canvas.configure(
+                scrollregion=canvas.bbox("all")
+            )
+        )
+
+        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+
+        # Obsługa scrollowania
+        def _on_mousewheel(event):
+            if platform.system() == "Windows":
+                canvas.yview_scroll(int(-1*(event.delta/120)), "units")
+            elif platform.system() == "Darwin":
+                canvas.yview_scroll(int(-1*event.delta), "units")
+
+        def _bind_mouse(event):
+            canvas.bind_all("<MouseWheel>", _on_mousewheel)
+            # Obsługa dla Linuxa (X11)
+            canvas.bind_all("<Button-4>", lambda e: canvas.yview_scroll(-1, "units"))
+            canvas.bind_all("<Button-5>", lambda e: canvas.yview_scroll(1, "units"))
+
+        def _unbind_mouse(event):
+            canvas.unbind_all("<MouseWheel>")
+            canvas.unbind_all("<Button-4>")
+            canvas.unbind_all("<Button-5>")
+
+        canvas.bind("<Enter>", _bind_mouse)
+        canvas.bind("<Leave>", _unbind_mouse)
+
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
 
         # --- Przeregulowanie ---
-        tk.Label(win, text="Maksymalne przeregulowanie [%]:").pack(anchor="w", pady=5)
+        tk.Label(scrollable_frame, text="Maksymalne przeregulowanie [%]:").pack(anchor="w", pady=5)
         self.var_overshoot = tk.DoubleVar(value=1.0)
-        tk.Entry(win, textvariable=self.var_overshoot, width=10).pack()
+        tk.Entry(scrollable_frame, textvariable=self.var_overshoot, width=10).pack()
 
         # --- Czas ustalania ---
-        tk.Label(win, text="Maksymalny czas ustalania [s]:").pack(anchor="w", pady=5)
+        tk.Label(scrollable_frame, text="Maksymalny czas ustalania [s]:").pack(anchor="w", pady=5)
         self.var_settling = tk.DoubleVar(value=5.0)
-        tk.Entry(win, textvariable=self.var_settling, width=10).pack()
+        tk.Entry(scrollable_frame, textvariable=self.var_settling, width=10).pack()
 
-        # --- Przeregulowanie ---
-        tk.Label(win, text="Maksymaln uchyb ustalony [%]:").pack(anchor="w", pady=5)
+        # --- Uchyb ustalony ---
+        tk.Label(scrollable_frame, text="Maksymalny uchyb ustalony [%]:").pack(anchor="w", pady=5)
         self.var_ss = tk.DoubleVar(value=0.5)
-        tk.Entry(win, textvariable=self.var_ss, width=10).pack()
+        tk.Entry(scrollable_frame, textvariable=self.var_ss, width=10).pack()
 
         # --- Maksymalne wartości PID ---
-        tk.Label(win, text="Maksymalne Kp:").pack(anchor="w", pady=5)
+        tk.Label(scrollable_frame, text="Maksymalne Kp:").pack(anchor="w", pady=5)
         self.var_max_Kp = tk.DoubleVar(value=10.0)
-        tk.Entry(win, textvariable=self.var_max_Kp, width=10).pack()
+        tk.Entry(scrollable_frame, textvariable=self.var_max_Kp, width=10).pack()
 
-        tk.Label(win, text="Maksymalne Ki:").pack(anchor="w", pady=5)
+        tk.Label(scrollable_frame, text="Maksymalne Ki:").pack(anchor="w", pady=5)
         self.var_max_Ki = tk.DoubleVar(value=5.0)
-        tk.Entry(win, textvariable=self.var_max_Ki, width=10).pack()
+        tk.Entry(scrollable_frame, textvariable=self.var_max_Ki, width=10).pack()
 
-        tk.Label(win, text="Maksymalne Kd:").pack(anchor="w", pady=5)
+        tk.Label(scrollable_frame, text="Maksymalne Kd:").pack(anchor="w", pady=5)
         self.var_max_Kd = tk.DoubleVar(value=5.0)
-        tk.Entry(win, textvariable=self.var_max_Kd, width=10).pack()
+        tk.Entry(scrollable_frame, textvariable=self.var_max_Kd, width=10).pack()
 
         # --- Funkcja celu ---
-        tk.Label(win, text="Funkcja celu:").pack(anchor="w", pady=5)
+        tk.Label(scrollable_frame, text="Funkcja celu:").pack(anchor="w", pady=5)
         self.var_cost = tk.StringVar(value="IAE")
         ttk.Combobox(
-            win,
+            scrollable_frame,
             textvariable=self.var_cost,
             values=["IAE", "ISE", "ITAE", "ITSE"],
             state="readonly"
         ).pack()
 
         # --- Wagi ---
-
-        tk.Label(win, text="Waga przeregulowania:").pack(anchor="w", pady=5)
+        tk.Label(scrollable_frame, text="Waga przeregulowania:").pack(anchor="w", pady=5)
         self.var_w_overshoot = tk.DoubleVar(value=1.0)
-        tk.Entry(win, textvariable=self.var_w_overshoot, width=10).pack()
+        tk.Entry(scrollable_frame, textvariable=self.var_w_overshoot, width=10).pack()
 
-        tk.Label(win, text="Waga czasu ustalania:").pack(anchor="w", pady=5)
+        tk.Label(scrollable_frame, text="Waga czasu ustalania:").pack(anchor="w", pady=5)
         self.var_w_speed = tk.DoubleVar(value=1.0)
-        tk.Entry(win, textvariable=self.var_w_speed, width=10).pack()
+        tk.Entry(scrollable_frame, textvariable=self.var_w_speed, width=10).pack()
 
-        tk.Label(win, text="Waga uchybu ustalonego:").pack(anchor="w", pady=5)
+        tk.Label(scrollable_frame, text="Waga uchybu ustalonego:").pack(anchor="w", pady=5)
         self.var_w_ss = tk.DoubleVar(value=1.0)
-        tk.Entry(win, textvariable=self.var_w_ss, width=10).pack()
+        tk.Entry(scrollable_frame, textvariable=self.var_w_ss, width=10).pack()
 
         # --- Zapis ---
-        tk.Button(win, text="Zapisz", command=lambda: self.save_quality(win)).pack(pady=15)
+        tk.Button(scrollable_frame, text="Zapisz", command=lambda: self.save_quality(win)).pack(pady=15)
 
     def save_quality(self, window):
         self.quality_params = {
