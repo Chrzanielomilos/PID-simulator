@@ -461,19 +461,17 @@ class App:
         entry_amp.bind("<KeyRelease>", lambda e: self.validate_param("amplitude", entry_amp))
 
     def build_sine_wave_inputs(self):
-
         tk.Label(self.shape_frame, text="Parametry sygnału harmonicznego:", font=("Arial", 12)).pack(anchor="w")
-
-        # zmienne rampy
         self.sine_wave_vars = {
             "frequency": tk.DoubleVar(value=1),
             "amplitude": tk.DoubleVar(value=1),
-            "delay": tk.DoubleVar(value=0)
+            "delay": tk.DoubleVar(value=0),
+            "periods": tk.IntVar(value=6)
         }
 
         # wymagania walidacyjne
-        self.positive.update({"frequency", "amplitude"})
-        self.nonzero.update({"frequency", "amplitude"})
+        self.positive.update({"frequency", "amplitude", "periods"})
+        self.nonzero.update({"frequency", "amplitude", "periods"})
 
         # --- czas trwania ---
         row1 = tk.Frame(self.shape_frame)
@@ -494,13 +492,20 @@ class App:
         entry_amp.bind("<KeyRelease>", lambda e: self.validate_param("amplitude", entry_amp))
 
         # --- przesunięcie fazy ---
-        row2 = tk.Frame(self.shape_frame)
-        row2.pack(fill="x", pady=3)
-
-        tk.Label(row2, text="Przesunięcie fazy [st]:", width=20).pack(side="left")
-        entry_dl = tk.Entry(row2, textvariable=self.sine_wave_vars["delay"], width=10)
+        row3 = tk.Frame(self.shape_frame)
+        row3.pack(fill="x", pady=3)
+        tk.Label(row3, text="Przesunięcie fazy [st]:", width=20).pack(side="left")
+        entry_dl = tk.Entry(row3, textvariable=self.sine_wave_vars["delay"], width=10)
         entry_dl.pack(side="left")
         entry_dl.bind("<KeyRelease>", lambda e: self.validate_param("delay", entry_dl))
+
+        # --- liczba okresów ---
+        row4 = tk.Frame(self.shape_frame)
+        row4.pack(fill="x", pady=3)
+        tk.Label(row4, text="Liczba okresów:", width=20).pack(side="left")
+        entry_per = tk.Entry(row4, textvariable=self.sine_wave_vars["periods"], width=10)
+        entry_per.pack(side="left")
+        entry_per.bind("<KeyRelease>", lambda e: self.validate_param("periods", entry_per))
 
 
     def build_triangle_wave_inputs(self):
@@ -575,9 +580,12 @@ class App:
                 m = self.Sim.metrics
                 self.log("--- WYNIKI SYMULACJI ---")
                 self.log(f"Krok integracji: {m['step']:.5f} s")
-                self.log(f"Końcowy uchyb: {m['final_e']:.5f}")
-                self.log(f"Przeregulowanie: {m['overshoot']:.2f}%")
-                self.log(f"Czas ustalania: {(m['settling_time'] if m['settling_time'] != None else -1):.3f} s")
+                if isinstance(self.Sim.signal_object, sim.SineWave):
+                    self.log(f"Średni uchyb: {m['mean_e']:.5f}")
+                else:
+                    self.log(f"Końcowy uchyb: {m['final_e']:.5f}")
+                    self.log(f"Przeregulowanie: {m['overshoot']:.2f}%")
+                    self.log(f"Czas ustalania: {(m['settling_time'] if m['settling_time'] != None else -1):.3f} s")
             else:
                 self.log("--- SYMULACJA PRZERWANA ---")
 
@@ -601,7 +609,8 @@ class App:
                 fr = self.sine_wave_vars["frequency"].get()
                 amp = self.sine_wave_vars["amplitude"].get()
                 dl = self.sine_wave_vars["delay"].get()
-                self.current_shape = sim.SineWave(fr, amp, dl)
+                per = self.sine_wave_vars["periods"].get()
+                self.current_shape = sim.SineWave(fr, amp, dl, per)
 
             case "triangleWave":
                 rt = self.triangle_wave_vars["raise_time"].get()

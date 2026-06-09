@@ -51,10 +51,11 @@ class Ramp:
         return (self.amplitude * time) / self.raise_time
     
 class SineWave:
-    def __init__(self, frequency, amplitude, delay = 0):
+    def __init__(self, frequency, amplitude, delay = 0, periods = 6):
         self.amplitude = amplitude
         self.frequency = frequency
         self.delay = delay
+        self.periods = periods
 
     def __str__(self):
         return (
@@ -236,7 +237,7 @@ class Simulator:
                 self.settling_time = None 
 
             # Jeśli sygnał utrzymał się w paśmie tolerancji przez 300 kroków, kończymy
-            if self.steady_counter > 300 or (isinstance(self.signal_object, SineWave) and (6 / self.signal_object.frequency) < self.t):
+            if self.steady_counter > 300 or (isinstance(self.signal_object, SineWave) and (self.signal_object.periods / self.signal_object.frequency) < self.t):
                 self.finished = True
                 
                 # Obliczenia metryk na koniec symulacji
@@ -253,7 +254,8 @@ class Simulator:
                     "step": dt,
                     "final_e": e,
                     "overshoot": overshoot,
-                    "settling_time": self.settling_time
+                    "settling_time": self.settling_time,
+                    "mean_e": self.IAE / self.t if self.t > 0 else 0.0
                 }
                 self.metrics["IAE"] = self.IAE
                 self.metrics["ISE"] = self.ISE
