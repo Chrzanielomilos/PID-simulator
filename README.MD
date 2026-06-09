@@ -113,64 +113,79 @@ W kodzie (`simulator.py`) ta transmitancja jest konwertowana do postaci stanu (A
 
 ## Auto-strojenie
 
-- Optymalizator: lokalna implementacja Nelder–Mead z wykorzystaniem funkcji kary. `Simulator.auto_tune` wywołuje ją z parametrami `step=0.3` i `max_iter=40`.
-- Punkt startowy używany przez optymalizator to wektor trzech parametrów: `x0 = [Kp, Ki, Kd]` (z aktualnych wartości regulatora). Parametr `Tf` NIE jest optymalizowany przez obecną implementację.
+- Optymalizator: lokalna implementacja Nelder–Mead dostępna w `mathFunctions.nelder_mead`. `Simulator.auto_tune` wywołuje ją z parametrami `step=0.3` i `max_iter=40`.
+- Punkt startowy używany przez optymalizator to wektor czterech parametrów: `x0 = [Kp, Ki, Kd, Tf]` (z aktualnych wartości regulatora). Parametr `Tf` jest włączony do optymalizacji w obecnej implementacji.
 
 - Funkcja celu (`objective`) — dokładny przebieg:
-  1. Przyjmuje testowane wartości `x = [Kp, Ki, Kd]`.
-  2. Sprawdza ograniczenia twarde: `Kp <= 0` lub `Ki < 0` lub `Kd < 0` zwracają karę `1e12`. Dodatkowo sprawdza, czy nie przekroczono górnych limitów `max_Kp`, `max_Ki`, `max_Kd` (wartości z GUI) — naruszenie również daje `1e12`.
+  1. Przyjmuje testowane wartości `x = [Kp, Ki, Kd, Tf]`.
+  2. Sprawdza ograniczenia twarde: `Kp <= 0` lub `Ki < 0` lub `Kd < 0` lub `Tf < 0` zwracają karę `1e12`. Dodatkowo sprawdza, czy nie przekroczono górnych limitów `max_Kp`, `max_Ki`, `max_Kd` (wartości z GUI) — naruszenie również daje `1e12`.
   3. Tworzy tymczasowy `Simulator` z tymi parametrami i uruchamia go w pętli (`while Sim.run(): pass`).
   4. Po zakończeniu pobiera `Sim.metrics` i oblicza wartość funkcji kosztu wywołaniem `mathFunctions.pid_cost_function(Sim.metrics, quality_params)`.
 
-- Po zakończeniu optymalizacji najlepszy wektor `best` jest zaokrąglany do dwóch miejsc i przypisywany jako nowe `Kp, Ki, Kd` (oraz zapisywany w `self.A`, `self.B` w celu dalszego użycia). `main.py` następnie aktualizuje pola GUI.
+- Implementacja `mathFunctions.pid_cost_function` używa wag i kryteriów wpisanych w GUI (`weight_overshoot`, `weight_speed`, `weight_ss`, `overshoot`, `settling_time`, `ss`) w celu dodania kar do wartości podstawowej metryki.
 
-### Kryteria jakości (dokładne rozwinięcia i wzory)
+- Po zakończeniu optymalizacji najlepszy wektor `best` (czteroelementowy) jest zaokrąglany do dwóch miejsc i przypisywany jako nowe `Kp, Ki, Kd, Tf` (wartości zapisane w `self.A`, `self.B`, `self.Tf` oraz w GUI przez `main.py`).
 
-W kodzie dostępne są cztery typy funkcji kosztu — to dokładnie te, które można wybrać w GUI (`IAE`, `ISE`, `ITAE`, `ITSE`) i które są rozpoznawane przez `mathFunctions.pid_cost_function`:
+### Kryteria jakości
 
-- IAE — Integral of Absolute Error (całka modułu uchybu):
+W kodzie dostępne są cztery podstawowe metryki błędu (można je wybrać w GUI jako `cost_function`):
 
-  $$
-  J_{\mathrm{IAE}} = \int_{0}^{T} |e(t)|dt
-  $$
-
-  W wersji dyskretnej:
+- IAE — Integral of Absolute Error:
 
   $$
-  \sum_{t=0}^{T}{|e(t)|dt}
+  J_{\mathrm{IAE}} = \int_{0}^{T} |e(t)|\,dt
   $$
 
-- ISE — Integral of Squared Error (całka kwadratu uchybu):
+- ISE — Integral of Squared Error:
 
   $$
-  J_{\mathrm{ISE}} = \int_{0}^{T} e^2(t)dt
+  J_{\mathrm{ISE}} = \int_{0}^{T} e^2(t)\,dt
   $$
 
-  W wersji dyskretnej:
-  $$
-  \sum_{t=0}^{T}{e^2(t)dt}
-  $$
-
-- ITAE — Integral of Time-weighted Absolute Error (całka czasu razy moduł uchybu):
+- ITAE — Integral of Time-weighted Absolute Error:
 
   $$
-  J_{\mathrm{ITAE}} = \int_{0}^{T} t|e(t)|dt
+  J_{\mathrm{ITAE}} = \int_{0}^{T} t\,|e(t)|\,dt
   $$
 
-  W wersji dyskretnej:
-  $$
-  \sum_{t=0}^{T}{t|e(t)|dt}
-  $$
-
-- ITSE — Integral of Time-weighted Squared Error (całka czasu razy kwadrat uchybu):
+- ITSE — Integral of Time-weighted Squared Error:
 
   $$
-  J_{\mathrm{ITSE}} = \int_{0}^{T} te^2(t)dt
+  J_{\mathrm{ITSE}} = \int_{0}^{T} t\,e^2(t)\,dt
   $$
 
-  W wersji dyskretnej: `e*e * t * dt`).
-  $$
-  \sum_{t=0}^{T}{te^2(t)dt}
-  $$
+Wszystkie są kumulowane dyskretnie w `Simulator` i dostępne w `Sim.metrics`.
 
-W `mathFunctions.pid_cost_function(metrics, quality_params)` wybierany jest dokładnie jeden z tych czterech wskaźników według `quality_params['cost_function']` i jest on zwracany jako wartość J minimalizowana przez Nelder–Mead.
+### Funkcja kosztu używana w optymalizacji (dokładny wzór)
+
+Niech $J_{\mathrm{base}}$ będzie wartością jednej z wybranych metryk (`IAE`/`ISE`/`ITAE`/`ITSE`) pobraną z `Sim.metrics`. Następnie obliczana jest kara `P` jako suma trzech składowych:
+
+1) Kara za przeregulowanie (overshoot): jeśli $\mathrm{overshoot} > \mathrm{overshoot}_{\mathrm{req}}$,
+
+$$
+P_{\mathrm{ov}} = w_{\mathrm{ov}} \cdot (\mathrm{overshoot} - \mathrm{overshoot}_{\mathrm{req}})
+$$
+
+2) Kara za czas ustalania: jeśli istnieje `settling_time` i $\mathrm{settling\_time} > \mathrm{settling\_req}$,
+
+$$
+P_{\mathrm{ts}} = w_{\mathrm{ts}} \cdot (\mathrm{settling\_time} - \mathrm{settling\_req})
+$$
+
+W razie braku ustalenia (wartość `settling_time` równa `None`) stosowana jest duża kara zastępcza: $P_{\mathrm{ts}} = w_{\mathrm{ts}} \cdot 1000$.
+
+3) Kara za uchyb ustalony (steady-state error): jeśli $|e_{\infty}| > ss_{\mathrm{req}}$,
+
+$$
+P_{\mathrm{ss}} = w_{\mathrm{ss}} \cdot (|e_{\infty}| - ss_{\mathrm{req}})
+$$
+
+Łączna kara: $P = P_{\mathrm{ov}} + P_{\mathrm{ts}} + P_{\mathrm{ss}}$.
+
+Funkcja kosztu minimalizowana przez Nelder–Mead to:
+
+$$
+J = J_{\mathrm{base}} + 10000 \cdot P
+$$
+
+gdzie wagi $w_{\mathrm{ov}}, w_{\mathrm{ts}}, w_{\mathrm{ss}}$ oraz progi (`overshoot_req`, `settling_req`, `ss_req`) pochodzą z `quality_params` z GUI (`weight_overshoot`, `weight_speed`, `weight_ss`, `overshoot`, `settling_time`, `ss`).
