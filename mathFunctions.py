@@ -156,6 +156,10 @@ def pid_cost_function(metrics, quality_params):
     cost_type = quality_params["cost_function"]
     base_cost = metrics.get(cost_type, metrics["IAE"])
 
+    # Jeśli to sinus ignorujemy kary za skok
+    if metrics.get("is_sine", False):
+        return base_cost
+
     penalty = 0.0
     
     # Kara za przeregulowanie z wagą
