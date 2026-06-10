@@ -32,7 +32,7 @@ python main.py
 
 ---
 
-## Dokładny model obiektu użyty w symulatorze
+## Obiekt użyty w symulatorze
 
 Transmitancja:
 
@@ -98,13 +98,6 @@ Parametr opóźnienia startu sygnału (w GUI jest pod listą sygnałów wejścio
 
 - Jeśli $t < t_{\mathrm{delay}}$, to `r(t) = 0.0`
 - Jeśli $t \ge t_{\mathrm{delay}}$, to: `r(t)=signal_object.getValue(t−t_delay)`
-
----
-
-## Metryki
-
-- `IAE`, `ISE`, `ITAE`, `ITSE` kumulowane w pętli.
-- Przy zakończeniu symulacji `Simulator.metrics` zawiera: `step`, `final_e`, `overshoot`, `settling_time`, `IAE`, `ISE`, `ITAE`, `ITSE`.
 
 ---
 
