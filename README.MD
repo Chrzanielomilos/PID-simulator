@@ -2,11 +2,7 @@
 
 ---
 
-# Symulator odpowiedzi układu z regulatorem PID — dokumentacja implementacji
-
-Poniższa dokumentacja opisuje tylko i wyłącznie zachowanie i strukturę tego konkretnego symulatora, tak jak zostało zaimplementowane w plikach `main.py`, `simulator.py`, `mathFunctions.py` i `tooltip.py`.
-
----
+# Symulator odpowiedzi układu z regulatorem PID
 
 ## Cel projektu
 
@@ -84,7 +80,7 @@ W kodzie (`simulator.py`) ta transmitancja jest konwertowana do postaci stanu (A
 ## Integracja i dobór kroku
 
 - Integracja stanu obiektu wykonywana jest funkcją `mf.rk4_step` (RK4).
-- Krok `dt` jest wyznaczany dynamicznie przez obiekt sygnału wejściowego za pomocą metody returnStep(t_min). Dla sygnałów skokowych zależy od czasu narastania/trwania, natomiast dla sygnału sinusoidalnego (SineWave) krok jest zagęszczony do wartości 100 próbek na okres. Warto przed uruchomieniem autoregulacji wprowadzić równy punkt początkowy regulatora, ponieważ sam proces strojenia odbędzie się wtedy szybciej.
+- Krok `dt` jest wyznaczany automatycznie na podstawie najmniejszej stałej czasowej. Z tego powodu przed uruchomieniem autoregulacji zalecane jest wprowadzenie równego punktu początkowego regulatora, ponieważ przyspieszy to proces minimalizacji.
 
 ---
 
