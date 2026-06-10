@@ -21,9 +21,7 @@ Interaktywny symulator układu drugiego rzędu sterowanego regulatorem PID z fil
 
 ---
 
-## Jak uruchomić
-
-1. Utwórz i aktywuj virtualenv, zainstaluj zależności z `requirements.txt`.
+## Pierwsze uruchomienie
 
 ```bash
 python -m venv venv
@@ -42,13 +40,13 @@ $$
 G_0(s)=\frac{a_1 s + a_0}{b_2 s^2 + b_1 s + b_0}
 $$
 
-W kodzie (`simulator.py`) ta transmitancja jest konwertowana do postaci stanu (A,B,C,D) przez `mf.tf(...)` i `mf.ssdata(...)`.
+W `simulator.py` ta transmitancja jest konwertowana do postaci stanu (A,B,C,D) przez `mf.tf(...)` i `mf.ssdata(...)`.
 
 ---
 
 ## Szczegóły implementacji regulatora PID
 
-- Równanie sterowania w pętli symulacji (`Simulator.run`):
+- Równanie sterowania w pętli symulacji `Simulator.run`:
 
   - $D_{raw} = \frac{e - e_{prev}}{dt}$
   - $\alpha = \frac{T_f}{T_f + dt}$
@@ -60,7 +58,7 @@ W kodzie (`simulator.py`) ta transmitancja jest konwertowana do postaci stanu (A
 
   `[a1, a0, b2, b1, b0, Kp, Tf, B, A, Umax, Umin, tolerance, start_delay]`
 
-  gdzie w kodzie `A` = `Ki` (jeśli forma klasyczna) lub `Kp/Ti` (jeśli forma czasowa), oraz `B` = `Kd` (klasyczna) lub `Kp*Td` (czasowa).
+  gdzie `A` = `Ki` (jeśli forma klasyczna) lub `Kp/Ti` (jeśli forma czasowa), oraz `B` = `Kd` (klasyczna) lub `Kp*Td` (czasowa).
 
 ---
 
@@ -112,7 +110,7 @@ Parametr opóźnienia startu sygnału (w GUI jest pod listą sygnałów wejścio
 
 ## Kryteria stopu
 
-- Główna reguła zakończenia: jeśli uchyb `abs(e) <= ep` (gdzie `ep = tolerance * amplitude`) i `signal_object.getSettlingTime() < t`, to inkrementowany jest `steady_counter`.
+- Główna reguła zakończenia: jeśli uchyb `abs(e) <= ep` (gdzie `ep = tolerance * amplitude`) i `signal_object.getSettlingTime() < t`, to zwiększany jest `steady_counter`.
 - Jeśli `steady_counter > 300` symulacja zostaje zakończona.
 - Dla `SineWave` dodatkowy warunek: symulacja kończy się, gdy `t > 6 / frequency` (po 6 okresach).
 
@@ -135,7 +133,7 @@ Parametr opóźnienia startu sygnału (w GUI jest pod listą sygnałów wejścio
 
 ### Kryteria jakości
 
-W kodzie dostępne są cztery podstawowe metryki błędu (można je wybrać w GUI jako `cost_function`):
+Dostępne są cztery podstawowe metryki błędu (można je wybrać w GUI jako `cost_function`):
 
 - IAE — Integral of Absolute Error:
 
@@ -161,7 +159,7 @@ $$
 J_{\mathrm{ITSE}} = \int_{0}^{T} te^2(t)dt
 $$
 
-Wszystkie są kumulowane dyskretnie w `Simulator` i dostępne w `Sim.metrics`.
+Wszystkie są obliczane dyskretnie w `Simulator` i dostępne w `Sim.metrics`.
 
 ### Funkcja kosztu używana w optymalizacji (dokładny wzór)
 
