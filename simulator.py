@@ -240,7 +240,7 @@ class Simulator:
                 self.settling_time = None 
 
             # Jeśli sygnał utrzymał się w paśmie tolerancji przez 300 kroków, kończymy
-            if self.steady_counter > 300 or (isinstance(self.signal_object, SineWave) and (self.signal_object.periods / self.signal_object.frequency) < self.t):
+            if self.steady_counter > 300 or (isinstance(self.signal_object, SineWave) and (self.signal_object.periods / self.signal_object.frequency) < self.t - self.start_delay):
                 self.finished = True
                 
                 # Obliczenia metryk na koniec symulacji
