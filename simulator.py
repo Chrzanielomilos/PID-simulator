@@ -324,7 +324,7 @@ class Simulator:
             if not Sim.metrics_ready:
                 return 1e12
 
-            # 🔥 JEDYNE miejsce, gdzie liczymy J → mathFunctions.pid_cost_function
+            # liczymy J
             return mf.pid_cost_function(Sim.metrics, quality_params)
 
         # Uruchamiamy simplex

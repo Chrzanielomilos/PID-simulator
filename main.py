@@ -60,7 +60,7 @@ class App:
         # --- Renderowanie wzoru w stylu LaTeX ---
         fig_eq = Figure(figsize=(4, 1.2), dpi=100)
         
-        # Ustawienie tła na taki sam kolor HEX jak tło okna aplikacji
+        # Ustawienie tła na taki sam kolor jak tło okna aplikacji
         fig_eq.patch.set_facecolor(bg_hex)
 
         ax_eq = fig_eq.add_subplot(111)
@@ -119,7 +119,7 @@ class App:
 
         self.build_ramp_inputs()
 
-        # --- Dodane: Tolerancja stanu ustalonego ---
+        # --- Tolerancja stanu ustalonego ---
         row_tol = tk.Frame(self.left_frame)
         row_tol.pack(fill="x", pady=5)
         tk.Label(row_tol, text="Tolerancja ustabilizowania [%]:").pack(side="left")
@@ -136,7 +136,6 @@ class App:
             ("tolerance", self.entry_tol),
         ]:
             widget.bind("<KeyRelease>", lambda e, n=name, w=widget: self.validate_param(n, w))
-        # --- Koniec dodanego fragmentu ---
 
         self.calc_button = tk.Button(self.left_frame, text="Wyreguluj do zadanych ustawień", command=self.calc_pid_window)
         self.calc_button.pack(fill="x", pady=20)
