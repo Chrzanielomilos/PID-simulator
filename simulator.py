@@ -114,7 +114,7 @@ class Simulator:
         self.ax = ax
         self.form = form
 
-        # --- Odbiór parametrów z GUI ---
+        # Odbiór parametrów z GUI
         (
             self.a1, self.a0,
             self.b2, self.b1, self.b0,
@@ -128,13 +128,13 @@ class Simulator:
         self.ITAE = 0.0
         self.ITSE = 0.0
 
-        # --- Konwersja parametrów PID ---
+        # Konwersja parametrów PID
         # Forma klasyczna: A = Ki, B = Kd
         # Forma czasowa:   A = Kp/Ti, B = Kp*Td
         self.Ki = self.A
         self.Kd = self.B
 
-        # --- Dynamiczna transmitancja obiektu ---
+        # Dynamiczna transmitancja obiektu
         # G(s) = (a1*s + a0) / (b2*s^2 + b1*s + b0)
         Gp = mf.tf([self.a1, self.a0], [self.b2, self.b1, self.b0])
         self.Ap, self.Bp, self.Cp, self.Dp = mf.ssdata(Gp)
@@ -176,7 +176,7 @@ class Simulator:
         # dynamiczny uchyb dopuszczalny (np. 0.05 * 10V = 0.5V)
         ep = self.tolerance * amp 
 
-        # --- 10 kroków RK4 ---
+        # 10 kroków RK4
         for _ in range(10):
 
             # sygnał zadany
@@ -197,7 +197,7 @@ class Simulator:
             self.ITAE += abs(e) * self.t * dt
             self.ITSE += (e * e) * self.t * dt
 
-            # --- PID ---
+            # PID
             # filtr D (ISA)
             D_raw = (e - self.e_prev) / dt
             alpha = self.Tf / (self.Tf + dt)
@@ -217,7 +217,7 @@ class Simulator:
             if u_raw == u or (u_raw * e <= 0):
                 self.I += e * dt
 
-            # --- Obiekt (RK4) ---
+            # Obiekt (RK4)
             self.Xp = mf.rk4_step(self.Ap, self.Bp, self.Xp, u, dt)
 
             # zapis danych
@@ -227,15 +227,12 @@ class Simulator:
 
             self.t += dt
 
-            # --- Kryteria stopu i zbieranie metryk ---
-            # Jeśli uchyb jest mniejszy bądź równy naszej dopuszczalnej tolerancji:
+            # Kryteria stopu i zbieranie metryk
             if abs(e) <= ep and self.signal_object.getSettlingTime() < (self.t - self.start_delay):
                 self.steady_counter += 1
-                # Jeśli to pierwszy moment wpadnięcia w pasmo, zapisz potencjalny czas ustalania
                 if self.settling_time is None:
                     self.settling_time = self.t 
             else:
-                # Sygnał wypadł poza pasmo dopuszczalne - resetujemy liczniki
                 self.steady_counter = 0
                 self.settling_time = None 
 
@@ -246,13 +243,10 @@ class Simulator:
                 # Obliczenia metryk na koniec symulacji
                 max_y = max(self.y_data)
                 
-                # Wyliczamy % przeregulowania (zabezpieczenie przed dzieleniem przez zero)
                 if amp != 0:
                     overshoot = ((max_y - amp) / amp) * 100 if max_y > amp else 0.0
                 else:
                     overshoot = 0.0
-                
-                # Zapisujemy ostateczny słownik z danymi dla GUI
                 self.metrics = {
                     "step": dt,
                     "final_e": e,
@@ -269,7 +263,7 @@ class Simulator:
                 break
 
         if (self.ax != None):
-            # --- Rysowanie ---
+            # Rysowanie
             self.ax.clear()
             self.ax.margins(x=0)
             self.ax.plot(self.x_data, self.r_data, "--", color="red", label="Wejście")
@@ -324,7 +318,7 @@ class Simulator:
             if not Sim.metrics_ready:
                 return 1e12
 
-            # liczymy J
+            # liczenie J
             return mf.pid_cost_function(Sim.metrics, quality_params)
 
         # Uruchamiamy simplex

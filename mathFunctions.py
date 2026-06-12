@@ -108,7 +108,7 @@ def ssdata(G: TransferFunction):
         num(s) = b0 s^n + b1 s^{n-1} + ... + bn
     D = b0
     C = [b1 - a1 D, b2 - a2 D, ..., bn - an D]
-    A, B – standardowa forma sterowalna.
+    A, B - standardowa forma sterowalna.
     """
     den = G.den[:]  # [1, a1, a2, ..., an]
     num = G.num[:]  # [b0, b1, ..., bm]
@@ -127,15 +127,11 @@ def ssdata(G: TransferFunction):
     # num = [b0, b1, ..., bn]
     b = num
 
-    #D = b[0]
-    ## C = [b1 - a1*D, b2 - a2*D, ..., bn - an*D]
-    #C = [[b[i + 1] - a[i] * D for i in range(n)]]
-
     D = b[0]
     # Poprawiona kolejność: [bn - an*D, b(n-1) - a(n-1)*D, ..., b1 - a1*D]
     C = [[b[n - i] - a[n - 1 - i] * D for i in range(n)]]
 
-    # A – macierz n×n w formie sterowalnej
+    # A - macierz nxn w formie sterowalnej
     A = [[0.0 for _ in range(n)] for _ in range(n)]
     # nadprzekątna = 1
     for i in range(n - 1):
@@ -143,7 +139,7 @@ def ssdata(G: TransferFunction):
     # ostatni wiersz = [-an, -a_{n-1}, ..., -a1]
     A[-1] = [-ai for ai in a[::-1]]
 
-    # B – wektor kolumnowy [0, 0, ..., 1]^T
+    # B - wektor kolumnowy [0, 0, ..., 1]^T
     B = [[0.0] for _ in range(n)]
     B[-1][0] = 1.0
 
@@ -181,7 +177,7 @@ def pid_cost_function(metrics, quality_params):
     return base_cost + penalty * 10000
 
 # ---------------------------------------------------------
-#  Nelder–Mead SIMPLEX for PID tuning
+#  Nelder-Mead SIMPLEX for PID tuning
 # ---------------------------------------------------------
 
 def nelder_mead(f, x0, step=0.5, alpha=1.0, gamma=2.0, rho=0.5, sigma=0.5, max_iter=60):

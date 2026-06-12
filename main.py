@@ -13,8 +13,6 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 class App:
     def __init__(self, root):
-
-        # Definicja zmiennych globalnych
         self.form = 0
         self.shape_options = {
             "rampa": "ramp",
@@ -39,17 +37,13 @@ class App:
         # --- LEWA STRONA ---
         tk.Label(self.left_frame, text="Panel sterowania", font=("Arial", 14)).pack(pady=5)
 
-        # Pokazana transmitancja
-        #tk.Label(self.left_frame, text="G₀(s) = (a₁·s + a₀) / (b₂·s² + b₁·s + b₀)", font=("Arial", 14)).pack()
-
-        # --- Pobranie systemowych kolorów motywu Tkinter ---
-        # Tworzymy tymczasową etykietę by odczytać domyślny kolor tekstu dla danego OS
+        # Tymcczasowa etykieta by odczytać kolory motywu
         dummy_label = tk.Label(self.left_frame)
         bg_color_tk = self.left_frame.cget("bg")
         fg_color_tk = dummy_label.cget("fg")
         dummy_label.destroy()
 
-        # Funkcja konwertująca 16-bitowe kolory Tkinter na standardowy HEX dla Matplotlib
+        # funckja do konwersji kolorów z tkinter na hex dla matplot
         def get_hex_color(widget, color_name):
             r, g, b = widget.winfo_rgb(color_name)
             return f"#{r//256:02x}{g//256:02x}{b//256:02x}"
@@ -57,26 +51,19 @@ class App:
         bg_hex = get_hex_color(self.left_frame, bg_color_tk)
         fg_hex = get_hex_color(self.left_frame, fg_color_tk)
 
-        # --- Renderowanie wzoru w stylu LaTeX ---
+        # renderowanie wzoru transmitancji
         fig_eq = Figure(figsize=(4, 1.2), dpi=100)
-        
-        # Ustawienie tła na taki sam kolor jak tło okna aplikacji
         fig_eq.patch.set_facecolor(bg_hex)
-
         ax_eq = fig_eq.add_subplot(111)
         ax_eq.axis('off')
-
         latex_formula = r"$G_0(s) = \frac{a_1 \cdot s + a_0}{b_2 \cdot s^2 + b_1 \cdot s + b_0}$"
-        
-        # Dodanie parametru color=fg_hex aby czcionka reagowała na tryb Dark/Light
         ax_eq.text(0.5, 0.5, latex_formula, fontsize=16, ha='center', va='center', color=fg_hex)
 
-        # Osadzenie wygenerowanego wzoru w interfejsie Tkinter
         self.canvas_eq = FigureCanvasTkAgg(fig_eq, master=self.left_frame)
         self.canvas_eq.get_tk_widget().pack(pady=5)
 
 
-        # Do podania parametry transmitancji
+        # Parametry transmitancji
         self.create_parameter_inputs(self.left_frame)
 
         # Przyciski
@@ -89,7 +76,7 @@ class App:
         tk.Button(button_frame, text="Forma czasowa",
                 command=lambda: self.switchForm(1)).grid(row=0, column=1, padx=5)
 
-        # Do podania parametry PID
+        # Parametry PID
         self.create_pid_inputs(self.left_frame)
 
         # Lista rozwijana
@@ -119,7 +106,7 @@ class App:
 
         self.build_ramp_inputs()
 
-        # --- Tolerancja stanu ustalonego ---
+        # Tolerancja stanu ustalonego
         row_tol = tk.Frame(self.left_frame)
         row_tol.pack(fill="x", pady=5)
         tk.Label(row_tol, text="Tolerancja ustabilizowania [%]:").pack(side="left")
@@ -293,7 +280,7 @@ class App:
             widget.destroy()
 
         if self.form == 0:
-            # Forma klasyczna → Ki, Kd
+            # Forma klasyczna -> Ki, Kd
             tk.Label(self.pid_row2, text="Ki:", width=4).pack(side="left")
             info_Ki = tk.Label(self.pid_row2, text="ⓘ", fg="lightblue", cursor="hand2")
             info_Ki.pack(side="left")
@@ -313,7 +300,7 @@ class App:
             self.entry_Kd.bind("<KeyRelease>", lambda e: self.validate_param("Kd", self.entry_Kd))
 
         else:
-            # Forma czasowa → Ti, Td
+            # Forma czasowa -> Ti, Td
             tk.Label(self.pid_row2, text="Ti [s]:", width=4).pack(side="left")
             info_Ti = tk.Label(self.pid_row2, text="ⓘ", fg="lightblue", cursor="hand2")
             info_Ti.pack(side="left")
@@ -356,7 +343,7 @@ class App:
         self.pid_frame = tk.Frame(parent)
         self.pid_frame.pack(pady=10, fill="x")
 
-        # --- Rząd 1: Kp, Tf ---
+        # Rząd 1: Kp, Tf
         row1 = tk.Frame(self.pid_frame)
         row1.pack(fill="x", pady=3)
 
@@ -374,13 +361,13 @@ class App:
         self.entry_Tf = tk.Entry(row1, textvariable=self.pid_vars["Tf"], width=8)
         self.entry_Tf.pack(side="left", padx=5)
 
-        # --- Rząd 2: dynamiczny ---
+        # Rząd 2: dynamiczny
         self.pid_row2 = tk.Frame(self.pid_frame)
         self.pid_row2.pack(fill="x", pady=3)
 
         self.build_pid_row2()
 
-        # --- Rząd 3: Saturacja ---
+        # Rząd 3: Saturacja
         row3 = tk.Frame(self.pid_frame)
         row3.pack(fill="x", pady=3)
 
@@ -421,7 +408,7 @@ class App:
         self.positive.update({"rise_time", "amplitude"})  # muszą być > 0
         self.nonzero.update({"rise_time", "amplitude"}) 
 
-        # --- czas narastania ---
+        # czas narastania
         row1 = tk.Frame(self.shape_frame)
         row1.pack(fill="x", pady=3)
 
@@ -430,7 +417,7 @@ class App:
         entry_rt.pack(side="left")
         entry_rt.bind("<KeyRelease>", lambda e: self.validate_param("rise_time", entry_rt))
 
-        # --- amplituda ---
+        # amplituda
         row2 = tk.Frame(self.shape_frame)
         row2.pack(fill="x", pady=3)
 
@@ -452,7 +439,7 @@ class App:
         self.positive.update({"duration", "amplitude"})
         self.nonzero.update({"duration", "amplitude"})
 
-        # --- czas trwania ---
+        # czas trwania
         row1 = tk.Frame(self.shape_frame)
         row1.pack(fill="x", pady=3)
 
@@ -461,7 +448,7 @@ class App:
         entry_dt.pack(side="left")
         entry_dt.bind("<KeyRelease>", lambda e: self.validate_param("duration", entry_dt))
 
-        # --- amplituda ---
+        # amplituda
         row2 = tk.Frame(self.shape_frame)
         row2.pack(fill="x", pady=3)
 
@@ -483,7 +470,7 @@ class App:
         self.positive.update({"frequency", "amplitude", "periods"})
         self.nonzero.update({"frequency", "amplitude", "periods"})
 
-        # --- czas trwania ---
+        # czas trwania
         row1 = tk.Frame(self.shape_frame)
         row1.pack(fill="x", pady=3)
 
@@ -492,7 +479,7 @@ class App:
         entry_f.pack(side="left")
         entry_f.bind("<KeyRelease>", lambda e: self.validate_param("frequency", entry_f))
 
-        # --- amplituda ---
+        # amplituda
         row2 = tk.Frame(self.shape_frame)
         row2.pack(fill="x", pady=3)
 
@@ -501,7 +488,7 @@ class App:
         entry_amp.pack(side="left")
         entry_amp.bind("<KeyRelease>", lambda e: self.validate_param("amplitude", entry_amp))
 
-        # --- przesunięcie fazy ---
+        # przesunięcie fazy
         row3 = tk.Frame(self.shape_frame)
         row3.pack(fill="x", pady=3)
         tk.Label(row3, text="Przesunięcie fazy [st]:", width=20).pack(side="left")
@@ -509,7 +496,7 @@ class App:
         entry_dl.pack(side="left")
         entry_dl.bind("<KeyRelease>", lambda e: self.validate_param("delay", entry_dl))
 
-        # --- liczba okresów ---
+        # liczba okresów
         row4 = tk.Frame(self.shape_frame)
         row4.pack(fill="x", pady=3)
         tk.Label(row4, text="Liczba okresów:", width=20).pack(side="left")
@@ -533,7 +520,7 @@ class App:
         self.positive.update({"raise_time", "fall_time", "amplitude"})
         self.nonzero.update({"raise_time", "amplitude"})
 
-        # --- czas narastania ---
+        # czas narastania
         row1 = tk.Frame(self.shape_frame)
         row1.pack(fill="x", pady=3)
 
@@ -542,7 +529,7 @@ class App:
         entry_rt.pack(side="left")
         entry_rt.bind("<KeyRelease>", lambda e: self.validate_param("raise_time", entry_rt))
 
-        # --- czas opadania ---
+        # czas opadania
         row2 = tk.Frame(self.shape_frame)
         row2.pack(fill="x", pady=3)
 
@@ -551,7 +538,7 @@ class App:
         entry_ft.pack(side="left")
         entry_ft.bind("<KeyRelease>", lambda e: self.validate_param("fall_time", entry_ft))
 
-        # --- amplituda ---
+        # amplituda
         row2 = tk.Frame(self.shape_frame)
         row2.pack(fill="x", pady=3)
 
@@ -583,9 +570,9 @@ class App:
 
     def tick(self):
         if self.Sim.run():
-            self.root.after(20, self.tick)   # kontynuuj
+            self.root.after(20, self.tick)
         else:
-            # Gdy symulacja się zakończy (Sim.run() zwróci False)
+            # Gdy symulacja się skończy
             if hasattr(self.Sim, "metrics_ready") and self.Sim.metrics_ready:
                 m = self.Sim.metrics
                 self.log("--- WYNIKI SYMULACJI ---")
@@ -789,22 +776,22 @@ class App:
         canvas.pack(side="left", fill="both", expand=True)
         scrollbar.pack(side="right", fill="y")
 
-        # --- Przeregulowanie ---
+        #Przeregulowanie
         tk.Label(scrollable_frame, text="Maksymalne przeregulowanie [%]:").pack(anchor="w", pady=5)
         self.var_overshoot = tk.DoubleVar(value=1.0)
         tk.Entry(scrollable_frame, textvariable=self.var_overshoot, width=10).pack()
 
-        # --- Czas ustalania ---
+        #Czas ustalania
         tk.Label(scrollable_frame, text="Maksymalny czas ustalania [s]:").pack(anchor="w", pady=5)
         self.var_settling = tk.DoubleVar(value=5.0)
         tk.Entry(scrollable_frame, textvariable=self.var_settling, width=10).pack()
 
-        # --- Uchyb ustalony ---
+        #Uchyb ustalony
         tk.Label(scrollable_frame, text="Maksymalny uchyb ustalony [%]:").pack(anchor="w", pady=5)
         self.var_ss = tk.DoubleVar(value=0.5)
         tk.Entry(scrollable_frame, textvariable=self.var_ss, width=10).pack()
 
-        # --- Maksymalne wartości PID ---
+        # Maksymalne wartości PID
         tk.Label(scrollable_frame, text="Maksymalne Kp:").pack(anchor="w", pady=5)
         self.var_max_Kp = tk.DoubleVar(value=10.0)
         tk.Entry(scrollable_frame, textvariable=self.var_max_Kp, width=10).pack()
@@ -817,7 +804,7 @@ class App:
         self.var_max_Kd = tk.DoubleVar(value=5.0)
         tk.Entry(scrollable_frame, textvariable=self.var_max_Kd, width=10).pack()
 
-        # --- Funkcja celu ---
+        # Funkcja celu
         tk.Label(scrollable_frame, text="Funkcja celu:").pack(anchor="w", pady=5)
         self.var_cost = tk.StringVar(value="IAE")
         ttk.Combobox(
@@ -827,7 +814,7 @@ class App:
             state="readonly"
         ).pack()
 
-        # --- Wagi ---
+        # Wagi
         tk.Label(scrollable_frame, text="Waga przeregulowania:").pack(anchor="w", pady=5)
         self.var_w_overshoot = tk.DoubleVar(value=1.0)
         tk.Entry(scrollable_frame, textvariable=self.var_w_overshoot, width=10).pack()
@@ -840,7 +827,7 @@ class App:
         self.var_w_ss = tk.DoubleVar(value=1.0)
         tk.Entry(scrollable_frame, textvariable=self.var_w_ss, width=10).pack()
 
-        # --- Zapis ---
+        # Zapis
         tk.Button(scrollable_frame, text="Zapisz", command=lambda: self.save_quality(win)).pack(pady=15)
 
     def save_quality(self, window):
