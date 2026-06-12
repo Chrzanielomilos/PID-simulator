@@ -65,18 +65,11 @@ def v_mean(vecs):
     return [x / n for x in res]
 
 def rk4_step(A, B, x, u, dt):
-    # k1 = A*x + B*u
     k1 = vecadd(matmul(A, x), vecscale(B, u))
-
-    # k2 = A*(x + dt/2*k1) + B*u
     x2 = vecadd(x, vecscale(k1, dt * 0.5))
     k2 = vecadd(matmul(A, x2), vecscale(B, u))
-
-    # k3
     x3 = vecadd(x, vecscale(k2, dt * 0.5))
     k3 = vecadd(matmul(A, x3), vecscale(B, u))
-
-    # k4
     x4 = vecadd(x, vecscale(k3, dt))
     k4 = vecadd(matmul(A, x4), vecscale(B, u))
 
@@ -119,7 +112,6 @@ def ssdata(G: TransferFunction):
     if len(num) < n + 1:
         num = [0.0] * (n + 1 - len(num)) + num
     elif len(num) > n + 1:
-        # obcinamy najwyższe, jeśli ktoś podał za długi licznik
         num = num[-(n + 1):]
 
     # den = [1, a1, a2, ..., an]
@@ -128,15 +120,12 @@ def ssdata(G: TransferFunction):
     b = num
 
     D = b[0]
-    # Poprawiona kolejność: [bn - an*D, b(n-1) - a(n-1)*D, ..., b1 - a1*D]
     C = [[b[n - i] - a[n - 1 - i] * D for i in range(n)]]
 
     # A - macierz nxn w formie sterowalnej
     A = [[0.0 for _ in range(n)] for _ in range(n)]
-    # nadprzekątna = 1
     for i in range(n - 1):
         A[i][i + 1] = 1.0
-    # ostatni wiersz = [-an, -a_{n-1}, ..., -a1]
     A[-1] = [-ai for ai in a[::-1]]
 
     # B - wektor kolumnowy [0, 0, ..., 1]^T
@@ -152,25 +141,24 @@ def pid_cost_function(metrics, quality_params):
     cost_type = quality_params["cost_function"]
     base_cost = metrics.get(cost_type, metrics["IAE"])
 
-    # Jeśli to sinus ignorujemy kary za skok
     if metrics.get("is_sine", False):
         return base_cost
 
     penalty = 0.0
     
-    # Kara za przeregulowanie z wagą
+    # Przeregulowanie
     if metrics["overshoot"] > quality_params["overshoot"]:
         penalty += quality_params["weight_overshoot"] * (metrics["overshoot"] - quality_params["overshoot"])
 
-    # Kara za czas ustalania z wagą
+    # Czas ustalania
     if metrics["settling_time"] is not None:
         if metrics["settling_time"] > quality_params["settling_time"]:
             penalty += quality_params["weight_speed"] * (metrics["settling_time"] - quality_params["settling_time"])
     else:
-        # Duża stała kara za całkowity brak ustalenia
+        # Brak ustalenia
         penalty += quality_params["weight_speed"] * 1000
 
-    # Kara za uchyb ustalony z wagą
+    # Uchyb ustalony
     if abs(metrics["final_e"]) > quality_params["ss"]:
         penalty += quality_params["weight_ss"] * (abs(metrics["final_e"]) - quality_params["ss"])
 

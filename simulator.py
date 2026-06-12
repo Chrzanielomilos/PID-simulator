@@ -171,9 +171,7 @@ class Simulator:
         if hasattr(self.signal_object, "amplitude"):
             ep = min(ep * self.signal_object.amplitude, ep)
 
-        # Dynamiczne pasmo tolerancji na podstawie amplitudy zadanego sygnału
         amp = getattr(self.signal_object, "amplitude", 1.0)
-        # dynamiczny uchyb dopuszczalny (np. 0.05 * 10V = 0.5V)
         ep = self.tolerance * amp 
 
         # 10 kroków RK4
@@ -205,15 +203,13 @@ class Simulator:
             self.Df_prev = Df
             self.e_prev = e
 
-            # Surowe sterowanie (potrzebne do sprawdzenia nasycenia)
+            # Surowe sterowanie
             u_raw = self.Kp * e + self.Ki * self.I + Df
             
-            # Saturacja (ograniczenie fizyczne)
+            # Saturacja
             u = mf.clip(u_raw, self.Umin, self.Umax)
 
-            # Anti-windup (Clamping)
-            # Całkujemy TYLKO jeśli sygnał sterujący nie jest ucięty (u_raw == u)
-            # ALBO jeśli uchyb e działa w kierunku "odklejenia" od nasycenia (u_raw * e <= 0)
+            # Anti-windup
             if u_raw == u or (u_raw * e <= 0):
                 self.I += e * dt
 
@@ -236,7 +232,6 @@ class Simulator:
                 self.steady_counter = 0
                 self.settling_time = None 
 
-            # Jeśli sygnał utrzymał się w paśmie tolerancji przez 300 kroków, kończymy
             if self.steady_counter > 300 or (isinstance(self.signal_object, SineWave) and (self.signal_object.periods / self.signal_object.frequency) < self.t - self.start_delay):
                 self.finished = True
                 
@@ -291,14 +286,14 @@ class Simulator:
         # Punkt startowy
         x0 = [float(self.Kp), float(self.Ki), float(self.Kd), float(self.Tf)]
 
-        # Funkcja celu przekazywana do simplex
+        # Funkcja celu
         def objective(x):
             Kp, Ki, Kd, Tf = x
             max_Kp = quality_params["max_Kp"]
             max_Ki = quality_params["max_Ki"]
             max_Kd = quality_params["max_Kd"]
 
-            # Ograniczenia: każde wzmocnienie >= 0 i <= max
+            # Ograniczenia
             if Kp <= 0 or Ki < 0 or Kd < 0 or Tf < 0.02:
                 return 1e12
             if Kp > max_Kp or Ki > max_Ki or Kd > max_Kd:
@@ -318,10 +313,9 @@ class Simulator:
             if not Sim.metrics_ready:
                 return 1e12
 
-            # liczenie J
             return mf.pid_cost_function(Sim.metrics, quality_params)
 
-        # Uruchamiamy simplex
+        # Minimalizacja
         best = mf.nelder_mead(objective, x0, step=0.3, max_iter=40)
 
         # Ręczne zaokrąglenie z zabezpieczeniem przed zerowym Tf i Kp

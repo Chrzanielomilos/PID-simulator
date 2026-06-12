@@ -228,7 +228,6 @@ class App:
             "b0": tk.DoubleVar(value=1),
         }
 
-        # Które parametry nie mogą być zerem
         self.nonzero.update({"b2"}) 
 
         frame = tk.Frame(parent)
@@ -275,7 +274,6 @@ class App:
         self.t_params = [entry_a1, entry_a0, entry_b2, entry_b1, entry_b0]
     
     def build_pid_row2(self):
-        # usuń stare pola
         for widget in self.pid_row2.winfo_children():
             widget.destroy()
 
@@ -405,7 +403,7 @@ class App:
         }
 
         # wymagania walidacyjne
-        self.positive.update({"rise_time", "amplitude"})  # muszą być > 0
+        self.positive.update({"rise_time", "amplitude"})
         self.nonzero.update({"rise_time", "amplitude"}) 
 
         # czas narastania
@@ -429,7 +427,7 @@ class App:
     def build_finite_square_inputs(self):
         tk.Label(self.shape_frame, text="Parametry sygnału prostokątnego:", font=("Arial", 12)).pack(anchor="w")
 
-        # zmienne rampy
+        # zmienne prostokąta
         self.finite_square_vars = {
             "duration": tk.DoubleVar(value=1),
             "amplitude": tk.DoubleVar(value=1),
@@ -509,7 +507,7 @@ class App:
 
         tk.Label(self.shape_frame, text="Parametry sygnału trójkątnego:", font=("Arial", 12)).pack(anchor="w")
 
-        # zmienne rampy
+        # zmienne trójkąta
         self.triangle_wave_vars = {
             "raise_time": tk.DoubleVar(value=1),
             "fall_time": tk.DoubleVar(value=0),
@@ -553,7 +551,6 @@ class App:
         label = self.combo.get()
         internal_value = self.shape_options[label]
 
-        # wyczyść ramkę na pola
         for widget in self.shape_frame.winfo_children():
             widget.destroy()
 
@@ -572,7 +569,6 @@ class App:
         if self.Sim.run():
             self.root.after(20, self.tick)
         else:
-            # Gdy symulacja się skończy
             if hasattr(self.Sim, "metrics_ready") and self.Sim.metrics_ready:
                 m = self.Sim.metrics
                 self.log("--- WYNIKI SYMULACJI ---")
